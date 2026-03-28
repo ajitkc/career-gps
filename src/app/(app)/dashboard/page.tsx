@@ -7,6 +7,7 @@ import {
   TrendingUp, Flame, Shield, Activity, User,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { GlowCard } from "@/components/ui/spotlight-card";
 import CityCareerMap from "@/components/app/CityCareerMap";
 
 export default function DashboardPage() {
@@ -31,8 +32,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const topCareer = analysis.career_matches[0];
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-6 space-y-6">
@@ -81,10 +80,10 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={() => setFullscreen(true)}
-              className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all flex items-center gap-2"
+              className="bg-surface-container-high hover:bg-surface-container rounded-xl px-4 py-3 border border-outline-variant/10 hover:border-primary/20 transition-all flex items-center gap-2 text-on-surface-variant hover:text-primary"
             >
-              <Maximize2 className="w-4 h-4" />
-              Fullscreen
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span className="text-[10px] uppercase tracking-widest font-bold">Fullscreen</span>
             </button>
           </div>
         </div>
@@ -108,14 +107,7 @@ export default function DashboardPage() {
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
       >
         {analysis.career_matches.map((career, i) => (
-          <div
-            key={career.title}
-            className={`bg-surface-container-high rounded-2xl p-5 border transition-all ${
-              i === 0
-                ? "border-primary/20 shadow-lg shadow-primary/5"
-                : "border-outline-variant/10"
-            }`}
-          >
+          <GlowCard key={career.title}>
             <div className="flex items-center justify-between mb-3">
               <h4 className="font-headline font-bold text-sm">{career.title}</h4>
               {i === 0 && (
@@ -156,7 +148,7 @@ export default function DashboardPage() {
                 <span className="text-outline">+{career.progression.length - 3}</span>
               )}
             </div>
-          </div>
+          </GlowCard>
         ))}
       </motion.div>
 
@@ -168,7 +160,7 @@ export default function DashboardPage() {
         className="grid grid-cols-1 md:grid-cols-3 gap-4"
       >
         {/* Next 30-Day Focus */}
-        <div className="md:col-span-2 bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+        <GlowCard className="md:col-span-2">
           <div className="flex items-center gap-2 mb-4">
             <Zap className="w-4 h-4 text-primary" />
             <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -201,10 +193,10 @@ export default function DashboardPage() {
               No immediate actions defined.
             </p>
           )}
-        </div>
+        </GlowCard>
 
         {/* Resources */}
-        <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+        <GlowCard>
           <div className="flex items-center gap-2 mb-4">
             <BookOpen className="w-4 h-4 text-secondary" />
             <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -229,7 +221,7 @@ export default function DashboardPage() {
               </a>
             ))}
           </div>
-        </div>
+        </GlowCard>
       </motion.div>
 
       {/* Burnout Quick Glance + Profile */}
@@ -241,101 +233,99 @@ export default function DashboardPage() {
       >
         {/* Burnout */}
         {burnoutScore && (
-          <a
-            href="/burnout"
-            className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10 hover:border-primary/20 transition-all group"
-          >
+          <a href="/burnout" className="block group">
+            <GlowCard>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-tertiary" />
+                  <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
+                    Burnout Monitor
+                  </span>
+                </div>
+                <ArrowRight className="w-4 h-4 text-outline group-hover:text-primary transition-colors" />
+              </div>
+              <div className="flex items-center gap-4">
+                <div
+                  className={`font-headline text-4xl font-extrabold ${
+                    burnoutScore.level === "low"
+                      ? "text-primary"
+                      : burnoutScore.level === "medium"
+                      ? "text-secondary"
+                      : "text-tertiary"
+                  }`}
+                >
+                  {burnoutScore.score}
+                </div>
+                <div>
+                  <div className="text-sm font-bold capitalize">
+                    {burnoutScore.level} Risk
+                  </div>
+                  <div className="text-xs text-on-surface-variant">
+                    {burnoutScore.riskWindow}
+                  </div>
+                </div>
+              </div>
+              {burnoutScore.factors.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-outline-variant/10 flex flex-wrap gap-2">
+                  {burnoutScore.factors.slice(0, 3).map((f, i) => (
+                    <span
+                      key={i}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        f.impact === "high"
+                          ? "bg-tertiary/10 text-tertiary"
+                          : f.impact === "medium"
+                          ? "bg-secondary/10 text-secondary"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      {f.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </GlowCard>
+          </a>
+        )}
+
+        {/* Profile Quick */}
+        <a href="/profile" className="block group">
+          <GlowCard>
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-tertiary" />
+                <User className="w-4 h-4 text-primary" />
                 <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
-                  Burnout Monitor
+                  Your Profile
                 </span>
               </div>
               <ArrowRight className="w-4 h-4 text-outline group-hover:text-primary transition-colors" />
             </div>
             <div className="flex items-center gap-4">
-              <div
-                className={`font-headline text-4xl font-extrabold ${
-                  burnoutScore.level === "low"
-                    ? "text-primary"
-                    : burnoutScore.level === "medium"
-                    ? "text-secondary"
-                    : "text-tertiary"
-                }`}
-              >
-                {burnoutScore.score}
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center">
+                <User className="w-6 h-6 text-on-primary" />
               </div>
               <div>
-                <div className="text-sm font-bold capitalize">
-                  {burnoutScore.level} Risk
-                </div>
+                <div className="font-headline font-bold">{profile?.name}</div>
                 <div className="text-xs text-on-surface-variant">
-                  {burnoutScore.riskWindow}
+                  {profile?.education}
                 </div>
               </div>
             </div>
-            {burnoutScore.factors.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-outline-variant/10 flex flex-wrap gap-2">
-                {burnoutScore.factors.slice(0, 3).map((f, i) => (
-                  <span
-                    key={i}
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      f.impact === "high"
-                        ? "bg-tertiary/10 text-tertiary"
-                        : f.impact === "medium"
-                        ? "bg-secondary/10 text-secondary"
-                        : "bg-primary/10 text-primary"
-                    }`}
-                  >
-                    {f.label}
-                  </span>
-                ))}
-              </div>
-            )}
-          </a>
-        )}
-
-        {/* Profile Quick */}
-        <a
-          href="/profile"
-          className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10 hover:border-primary/20 transition-all group"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-primary" />
-              <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
-                Your Profile
-              </span>
+            <div className="mt-3 pt-3 border-t border-outline-variant/10 flex flex-wrap gap-1.5">
+              {profile?.skills.slice(0, 4).map((s) => (
+                <span
+                  key={s}
+                  className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-medium"
+                >
+                  {s}
+                </span>
+              ))}
+              {(profile?.skills.length ?? 0) > 4 && (
+                <span className="text-[10px] text-outline">
+                  +{(profile?.skills.length ?? 0) - 4}
+                </span>
+              )}
             </div>
-            <ArrowRight className="w-4 h-4 text-outline group-hover:text-primary transition-colors" />
-          </div>
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary-container flex items-center justify-center">
-              <User className="w-6 h-6 text-on-primary" />
-            </div>
-            <div>
-              <div className="font-headline font-bold">{profile?.name}</div>
-              <div className="text-xs text-on-surface-variant">
-                {profile?.education}
-              </div>
-            </div>
-          </div>
-          <div className="mt-3 pt-3 border-t border-outline-variant/10 flex flex-wrap gap-1.5">
-            {profile?.skills.slice(0, 4).map((s) => (
-              <span
-                key={s}
-                className="px-2 py-0.5 bg-primary/10 text-primary rounded-md text-[10px] font-medium"
-              >
-                {s}
-              </span>
-            ))}
-            {(profile?.skills.length ?? 0) > 4 && (
-              <span className="text-[10px] text-outline">
-                +{(profile?.skills.length ?? 0) - 4}
-              </span>
-            )}
-          </div>
+          </GlowCard>
         </a>
       </motion.div>
     </div>

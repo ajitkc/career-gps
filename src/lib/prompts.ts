@@ -105,6 +105,8 @@ ${checkIn.emotionalState ? `Current emotional state: ${checkIn.emotionalState.re
 ## Instructions
 Respond with empathy and actionable advice. If they mention feeling stuck, burned out, or wanting to switch — acknowledge it first, then provide practical next steps.
 
+IMPORTANT: If the user's message indicates they want to explore NEW career directions, switch fields, or their situation has significantly changed — include "updated_career_matches" with 3 new career path suggestions. Only include this field when the conversation genuinely warrants new/different career paths. For routine check-ins or emotional support, omit this field entirely.
+
 Return valid JSON:
 {
   "acknowledgment": string (2-3 sentences acknowledging how they feel),
@@ -124,8 +126,22 @@ Return valid JSON:
       "reason": string,
       "url": string
     }
+  ],
+  "updated_career_matches": [
+    {
+      "title": string,
+      "fit_reason": string,
+      "difficulty": "Easy" | "Medium" | "Hard",
+      "growth": "Low" | "Medium" | "High",
+      "stress_level": "Low" | "Medium" | "High",
+      "starting_role": string,
+      "progression": [string],
+      "estimated_timeline": { "to_first_role": string, "to_mid_level": string, "to_senior": string }
+    }
   ]
 }
+
+NOTE: "updated_career_matches" is OPTIONAL. Only include it when the user explicitly asks about new career paths, wants to switch, or their query clearly warrants new suggestions. Otherwise omit it completely from the response.
 
 Return ONLY the JSON object, no markdown code blocks or extra text.`;
 }

@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { CheckCircle2, Circle, Clock, Zap } from "lucide-react";
+import SectionBadge from "./ui/section-badge";
 import { careers } from "@/data/careers";
 
 export default function RoadmapPreview() {
@@ -20,15 +21,13 @@ export default function RoadmapPreview() {
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           className="text-center mb-20"
         >
-          <span className="text-primary font-label text-xs tracking-[0.3em] uppercase font-semibold mb-4 block">
-            Sample Roadmap
-          </span>
-          <h2 className="font-headline text-4xl font-bold mb-4">
-            {career.title} — Your Path
+          <SectionBadge>Sample Roadmap</SectionBadge>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl tracking-tight mb-4">
+            <span className="font-headline font-bold">{career.title}, </span>
+            <span className="font-serif italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary-container pr-1">Your Path</span>
           </h2>
-          <p className="text-on-surface-variant max-w-xl mx-auto">
+          <p className="text-on-surface-variant max-w-xl mx-auto text-base md:text-lg font-body">
             A structured, time-bound progression from beginner to industry-ready.
-            Each step is calibrated for optimal growth without burnout.
           </p>
         </motion.div>
 

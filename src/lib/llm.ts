@@ -2,39 +2,42 @@ import type { AnalysisResponse, CheckInResponse, UserProfile, CheckInInput } fro
 import { buildAnalysisPrompt, buildCheckInPrompt } from "./prompts";
 import { MOCK_ANALYSIS, MOCK_CHECKIN_RESPONSE } from "@/data/mock-response";
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || "https://api.openai.com/v1";
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
-const USE_MOCK = process.env.USE_MOCK === "true" || !OPENAI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const USE_MOCK = process.env.USE_MOCK === "true" || !GEMINI_API_KEY;
 
-async function callLLM(prompt: string): Promise<string> {
-  const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+async function callGemini(prompt: string): Promise<string> {
+  const response = await fetch(GEMINI_URL, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${OPENAI_API_KEY}`,
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: OPENAI_MODEL,
-      messages: [
+      contents: [
         {
-          role: "system",
-          content: "You are Career GPS, a career guidance AI. Always respond with valid JSON only.",
+          parts: [
+            {
+              text: `You are Career GPS, a career guidance AI. Always respond with valid JSON only.\n\n${prompt}`,
+            },
+          ],
         },
-        { role: "user", content: prompt },
       ],
-      temperature: 0.7,
-      max_tokens: 4000,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 8192,
+        responseMimeType: "application/json",
+      },
     }),
   });
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`LLM API error: ${response.status} ${error}`);
+    throw new Error(`Gemini API error: ${response.status} ${error}`);
   }
 
   const data = await response.json();
-  return data.choices[0].message.content;
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error("Empty response from Gemini");
+  return text;
 }
 
 function parseJSON<T>(raw: string): T {
@@ -45,8 +48,7 @@ function parseJSON<T>(raw: string): T {
 
 export async function analyzeProfile(profile: UserProfile): Promise<AnalysisResponse> {
   if (USE_MOCK) {
-    // Return mock with user's actual name/education
-    await new Promise((r) => setTimeout(r, 1500)); // Simulate latency
+    await new Promise((r) => setTimeout(r, 1500));
     return {
       ...MOCK_ANALYSIS,
       user_summary: {
@@ -58,7 +60,7 @@ export async function analyzeProfile(profile: UserProfile): Promise<AnalysisResp
   }
 
   const prompt = buildAnalysisPrompt(profile);
-  const raw = await callLLM(prompt);
+  const raw = await callGemini(prompt);
   return parseJSON<AnalysisResponse>(raw);
 }
 
@@ -74,6 +76,6 @@ export async function processCheckIn(
 
   const summaryStr = `Career matches: ${analysis.career_matches.map((c) => c.title).join(", ")}. Current stage: ${analysis.roadmap.current_stage}. Burnout risk: ${analysis.burnout.burnout_risk}.`;
   const prompt = buildCheckInPrompt(profile, summaryStr, checkIn);
-  const raw = await callLLM(prompt);
+  const raw = await callGemini(prompt);
   return parseJSON<CheckInResponse>(raw);
 }

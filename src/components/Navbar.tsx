@@ -1,10 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Navigation } from "lucide-react";
+import React from "react";
+import { cn } from "@/lib/utils";
+import Logo from "@/components/ui/logo";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { MenuToggleIcon } from "@/components/ui/menu-toggle-icon";
+import { useScroll } from "@/components/ui/use-scroll";
+import AnimatedButton from "@/components/ui/animated-button";
 
-const navLinks = [
+const links = [
   { label: "Journey", href: "#journey" },
   { label: "Careers", href: "#careers" },
   { label: "Burnout", href: "#burnout" },
@@ -12,57 +16,107 @@ const navLinks = [
 ];
 
 export default function Navbar() {
-  const [scrolled, setScrolled] = useState(false);
+  const [open, setOpen] = React.useState(false);
+  const scrolled = useScroll(10);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  React.useEffect(() => {
+    document.body.style.overflow = open ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
 
   return (
-    <motion.nav
-      initial={{ y: -80 }}
-      animate={{ y: 0 }}
-      transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-surface/60 backdrop-blur-xl border-b border-outline-variant/15 shadow-[0_8px_32px_0_rgba(0,0,0,0.36)]"
-          : "bg-transparent"
-      }`}
+    <header
+      className={cn(
+        "fixed top-0 left-0 right-0 z-50 mx-auto w-full max-w-5xl md:rounded-full md:transition-all md:ease-out md:duration-500",
+        scrolled && !open
+          ? "bg-surface/80 supports-[backdrop-filter]:bg-surface/50 border border-outline-variant/15 backdrop-blur-xl md:top-4 md:max-w-4xl md:shadow-[0_8px_32px_0_rgba(0,0,0,0.36)]"
+          : open
+          ? "bg-surface/90 border-b border-outline-variant/10"
+          : "bg-transparent border-none"
+      )}
     >
-      <div className="flex justify-between items-center w-full px-6 py-4 max-w-7xl mx-auto">
+      <nav
+        className={cn(
+          "flex w-full items-center justify-between px-5 py-3 md:py-3.5 md:transition-all md:ease-out",
+          { "md:px-5 md:py-3": scrolled }
+        )}
+      >
         {/* Logo */}
-        <a href="#" className="flex items-center gap-2.5 group">
-          <div className="w-8 h-8 rounded-lg bg-primary-container/20 flex items-center justify-center group-hover:bg-primary-container/30 transition-colors">
-            <Navigation className="w-4 h-4 text-primary" />
-          </div>
-          <span className="text-xl font-bold tracking-tighter text-on-surface font-headline">
-            Career GPS
-          </span>
+        <a href="#" aria-label="Career GPS home">
+          <Logo className="h-7 w-auto" />
         </a>
 
-        {/* Nav Links — Desktop */}
-        <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
+        {/* Desktop Nav */}
+        <div className="hidden items-center gap-1 md:flex">
+          {links.map((link) => (
             <a
               key={link.label}
               href={link.href}
-              className="text-on-surface/70 hover:text-on-surface text-sm font-medium tracking-wide transition-colors font-headline"
+              className={cn(
+                buttonVariants({ variant: "ghost" }),
+                "text-on-surface/70 hover:text-on-surface hover:bg-surface-container font-headline text-sm rounded-full"
+              )}
             >
               {link.label}
             </a>
           ))}
+          <div className="ml-1">
+            <AnimatedButton href="/onboarding" size="sm">
+              Get Started
+            </AnimatedButton>
+          </div>
         </div>
 
-        {/* CTA */}
-        <a
-          href="/onboarding"
-          className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-6 py-2.5 rounded-lg font-headline font-bold text-sm tracking-wide active:scale-95 transition-transform hover:shadow-lg hover:shadow-primary/20"
+        {/* Mobile Hamburger */}
+        <Button
+          size="icon"
+          variant="outline"
+          onClick={() => setOpen(!open)}
+          className="md:hidden rounded-full border-outline-variant/20 bg-surface-container hover:bg-surface-container-high"
         >
-          Start Journey
-        </a>
+          <MenuToggleIcon open={open} className="size-5 text-on-surface" duration={300} />
+        </Button>
+      </nav>
+
+      {/* Mobile Menu */}
+      <div
+        className={cn(
+          "bg-surface/95 backdrop-blur-xl fixed top-14 right-0 bottom-0 left-0 z-50 flex flex-col overflow-hidden border-t border-outline-variant/10 md:hidden",
+          open ? "block" : "hidden"
+        )}
+      >
+        <div
+          data-slot={open ? "open" : "closed"}
+          className={cn(
+            "data-[slot=open]:animate-in data-[slot=open]:zoom-in-95 data-[slot=closed]:animate-out data-[slot=closed]:zoom-out-95 ease-out",
+            "flex h-full w-full flex-col justify-between gap-y-2 p-4"
+          )}
+        >
+          <div className="grid gap-y-1">
+            {links.map((link) => (
+              <a
+                key={link.label}
+                href={link.href}
+                onClick={() => setOpen(false)}
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "justify-start text-on-surface font-headline rounded-xl"
+                )}
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 pb-8">
+            <AnimatedButton href="/onboarding" variant="outline">
+              Sign In
+            </AnimatedButton>
+            <AnimatedButton href="/onboarding">
+              Get Started
+            </AnimatedButton>
+          </div>
+        </div>
       </div>
-    </motion.nav>
+    </header>
   );
 }

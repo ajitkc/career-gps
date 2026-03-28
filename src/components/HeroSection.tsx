@@ -1,45 +1,51 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Navigation } from "lucide-react";
+import AnimatedGradient from "./AnimatedGradient";
+import AnimatedButton from "./ui/animated-button";
 
 export default function HeroSection() {
   return (
-    <header className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden pt-20">
-      {/* Background: 3D Road Perspective */}
-      <div className="absolute inset-0 z-0 road-perspective">
-        <div className="road-surface absolute inset-0 bg-gradient-to-b from-transparent via-surface-container-low to-surface flex justify-center">
-          <div className="w-96 h-[200%] bg-gradient-to-b from-surface-container-highest/20 to-surface-container-lowest border-x border-outline-variant/10 relative">
-            <div className="absolute inset-y-0 left-1/2 w-1 border-l-2 border-dashed border-primary/40 -translate-x-1/2" />
-          </div>
-        </div>
-      </div>
+    <header className="relative flex flex-col items-center justify-center overflow-hidden min-h-screen">
+      {/* Animated gradient background */}
+      <AnimatedGradient
+        config={{ preset: "Prism" }}
+        noise={{ opacity: 0.3, scale: 1 }}
+      />
+      <div className="absolute inset-0 z-[1] bg-surface/60 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-40 z-[1] bg-gradient-to-t from-surface to-transparent pointer-events-none" />
 
-      {/* Atmospheric Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary-container/10 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-secondary-container/10 rounded-full blur-[120px] pointer-events-none" />
-
-      {/* Content */}
-      <div className="relative z-10 text-center px-6 max-w-4xl mx-auto">
+      {/* Content — centered in the viewport */}
+      <div className="relative z-10 text-center px-6 max-w-4xl mx-auto flex flex-col items-center justify-center flex-1">
+        {/* Badge */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          className="mb-5 flex justify-center"
         >
-          <span className="inline-block text-primary font-label text-xs tracking-[0.3em] uppercase font-semibold mb-6 opacity-80">
-            For students & early professionals
-          </span>
+          <div className="group relative inline-flex items-center gap-2.5 rounded-full border border-outline-variant/15 bg-white/[0.06] backdrop-blur-sm p-1 pr-4 shadow-sm overflow-hidden cursor-default">
+            <div className="absolute inset-0 z-0 animate-badge-shine" />
+            <span className="relative z-10 rounded-full bg-primary/15 p-1.5 flex items-center justify-center">
+              <Navigation className="w-3 h-3 text-primary" />
+            </span>
+            <span className="relative z-10 text-xs font-medium text-on-surface-variant tracking-wide capitalize">
+              For Students &amp; Early Professionals
+            </span>
+          </div>
         </motion.div>
 
+        {/* Heading */}
         <motion.h1
           initial={{ opacity: 0, y: 40 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
-          className="font-headline text-5xl md:text-7xl font-extrabold tracking-tighter text-on-surface mb-6 leading-tight"
+          className="text-3xl sm:text-4xl md:text-6xl tracking-tight text-on-surface mb-5 leading-snug"
         >
-          Stop guessing your future.
+          <span className="whitespace-nowrap font-headline font-bold">Stop guessing your future.</span>
           <br />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary-container">
+          <span className="font-serif italic font-normal text-4xl sm:text-5xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary-container pt-0 pb-1 pr-4 inline-block leading-tight" style={{ WebkitBoxDecorationBreak: "clone" }}>
             Start navigating it.
           </span>
         </motion.h1>
@@ -48,7 +54,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3, ease: [0.4, 0, 0.2, 1] }}
-          className="text-on-surface-variant text-lg md:text-xl max-w-2xl mx-auto mb-10 font-body"
+          className="text-on-surface-variant text-base md:text-lg max-w-xl mx-auto mb-10 font-body"
         >
           You are not behind. You just need a clearer route. Tell us where you are,
           and we&apos;ll map where you could go — while keeping burnout in check.
@@ -60,33 +66,28 @@ export default function HeroSection() {
           transition={{ duration: 0.8, delay: 0.45, ease: [0.4, 0, 0.2, 1] }}
           className="flex flex-col sm:flex-row gap-4 justify-center"
         >
-          <a
-            href="/onboarding"
-            className="bg-gradient-to-r from-primary to-primary-container text-on-primary px-10 py-5 rounded-xl font-headline font-bold text-lg hover:shadow-lg hover:shadow-primary/20 active:scale-95 transition-all duration-300"
-          >
+          <AnimatedButton href="/onboarding">
             Start Your Journey
-          </a>
-          <a
-            href="#journey"
-            className="glass-panel px-10 py-5 rounded-xl font-headline font-bold text-lg text-on-surface-variant border border-outline-variant/15 hover:bg-white/5 transition-all duration-300"
-          >
+          </AnimatedButton>
+          <AnimatedButton href="#highway" variant="outline">
             See How It Works
-          </a>
+          </AnimatedButton>
         </motion.div>
       </div>
 
-      {/* Scroll Indicator */}
-      <motion.div
+      {/* Explore — pinned to very bottom of viewport */}
+      <motion.a
+        href="#highway"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 0.5 }}
+        animate={{ opacity: 1 }}
         transition={{ delay: 1.2, duration: 0.8 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2"
+        className="relative z-10 pb-6 flex flex-col items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
       >
         <span className="text-[10px] uppercase tracking-[0.3em] font-label text-on-surface-variant">
           Explore
         </span>
         <ChevronDown className="w-5 h-5 text-on-surface-variant animate-bounce" />
-      </motion.div>
+      </motion.a>
     </header>
   );
 }

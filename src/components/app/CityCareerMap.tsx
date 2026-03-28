@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronUp, ChevronLeft, ChevronRight, CheckCircle2, ZoomIn, ZoomOut } from "lucide-react";
+import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, ZoomIn, ZoomOut } from "lucide-react";
 import type { CareerMatch } from "@/types";
 import { useStore } from "@/lib/store";
 
@@ -11,27 +11,22 @@ import { useStore } from "@/lib/store";
 // ============================================================
 
 interface MNode {
-  id: string;
-  label: string;
-  x: number;
-  y: number;
-  careerIdx: number;
-  stageIdx: number;
-  level: number;
-  lane: number;
-  burnout: boolean;
+  id: string; label: string; x: number; y: number;
+  careerIdx: number; stageIdx: number; level: number; lane: number;
+  burnout: boolean; weight: number;
 }
 
 interface MEdge { from: string; to: string }
+interface BezierPts { p0: [number, number]; p1: [number, number]; p2: [number, number]; p3: [number, number] }
 
 // ============================================================
 // LAYOUT
 // ============================================================
 
-const LW = 480; // lane gap — wider for bigger map
-const LH = 400; // level gap — taller
-const RW = 44;  // road width — wider
-const NR = 28;  // node radius — larger
+const LW = 480;
+const LH = 400;
+const RW = 35;  // 20% reduced from 44
+const NR = 28;
 
 function buildMap(careers: CareerMatch[]) {
   const nodes = new Map<string, MNode>();
@@ -46,11 +41,17 @@ function buildMap(careers: CareerMatch[]) {
     edges.push({ from: a, to: b }); adj.get(a)!.add(b); adj.get(b)!.add(a);
   }
 
-  add({ id: "root", label: "Start", x: 0, y: 0, careerIdx: -1, stageIdx: -1, level: 0, lane: Math.floor(n / 2), burnout: false });
+  add({ id: "root", label: "Start", x: 0, y: 0, careerIdx: -1, stageIdx: -1, level: 0, lane: Math.floor(n / 2), burnout: false, weight: 0 });
 
   careers.forEach((c, ci) => {
     c.progression.forEach((role, si) => {
-      add({ id: `c${ci}-s${si}`, label: role, x: ci * LW - ox, y: -(si + 1) * LH, careerIdx: ci, stageIdx: si, level: si + 1, lane: ci, burnout: c.stress_level === "High" });
+      add({
+        id: `c${ci}-s${si}`, label: role,
+        x: ci * LW - ox, y: -(si + 1) * LH,
+        careerIdx: ci, stageIdx: si, level: si + 1, lane: ci,
+        burnout: c.stress_level === "High",
+        weight: (si + 1) * 10,
+      });
       link(si === 0 ? "root" : `c${ci}-s${si - 1}`, `c${ci}-s${si}`);
     });
   });
@@ -64,13 +65,59 @@ function buildMap(careers: CareerMatch[]) {
 }
 
 // ============================================================
+// BEZIER ROAD HELPERS
+// ============================================================
+
+function getRoadBezier(x1: number, y1: number, x2: number, y2: number, seed: number): BezierPts {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  // 30% less curve: was (0.2 + 0.05), now (0.14 + 0.035)
+  const wobble = (Math.sin(seed * 7.3) * 0.5 + 0.5) * 0.14 + 0.035;
+  const isVert = Math.abs(dy) > Math.abs(dx);
+
+  if (isVert) {
+    const bendX = len * wobble * (seed % 2 === 0 ? 1 : -1);
+    return { p0: [x1, y1], p1: [x1 + bendX, y1 + dy * 0.35], p2: [x2 - bendX, y1 + dy * 0.65], p3: [x2, y2] };
+  } else {
+    const bendY = len * wobble * (seed % 2 === 0 ? 1 : -1);
+    return { p0: [x1, y1], p1: [x1 + dx * 0.35, y1 + bendY], p2: [x1 + dx * 0.65, y2 - bendY], p3: [x2, y2] };
+  }
+}
+
+function bezierPath(bp: BezierPts): string {
+  return `M${bp.p0[0]},${bp.p0[1]} C${bp.p1[0]},${bp.p1[1]} ${bp.p2[0]},${bp.p2[1]} ${bp.p3[0]},${bp.p3[1]}`;
+}
+
+function evalBezier(t: number, bp: BezierPts): [number, number] {
+  const mt = 1 - t;
+  return [
+    mt * mt * mt * bp.p0[0] + 3 * mt * mt * t * bp.p1[0] + 3 * mt * t * t * bp.p2[0] + t * t * t * bp.p3[0],
+    mt * mt * mt * bp.p0[1] + 3 * mt * mt * t * bp.p1[1] + 3 * mt * t * t * bp.p2[1] + t * t * t * bp.p3[1],
+  ];
+}
+
+function evalBezierTangent(t: number, bp: BezierPts): [number, number] {
+  const mt = 1 - t;
+  return [
+    3 * mt * mt * (bp.p1[0] - bp.p0[0]) + 6 * mt * t * (bp.p2[0] - bp.p1[0]) + 3 * t * t * (bp.p3[0] - bp.p2[0]),
+    3 * mt * mt * (bp.p1[1] - bp.p0[1]) + 6 * mt * t * (bp.p2[1] - bp.p1[1]) + 3 * t * t * (bp.p3[1] - bp.p2[1]),
+  ];
+}
+
+// ============================================================
 // PATHFINDING
 // ============================================================
 
-function bfs(adj: Map<string, Set<string>>, from: string, to: string): string[] | null {
+function findBestPath(adj: Map<string, Set<string>>, _nodes: Map<string, MNode>, from: string, to: string): string[] | null {
   if (from === to) return [from];
   const vis = new Set([from]); const q: string[][] = [[from]];
-  while (q.length > 0) { const p = q.shift()!; const c = p[p.length - 1]; for (const nb of adj.get(c) || []) { if (nb === to) return [...p, nb]; if (!vis.has(nb)) { vis.add(nb); q.push([...p, nb]); } } }
+  while (q.length > 0) {
+    const p = q.shift()!; const c = p[p.length - 1];
+    for (const nb of adj.get(c) || []) {
+      if (nb === to) return [...p, nb];
+      if (!vis.has(nb)) { vis.add(nb); q.push([...p, nb]); }
+    }
+  }
   return null;
 }
 
@@ -78,26 +125,6 @@ function bfsDist(adj: Map<string, Set<string>>, s: string) {
   const d = new Map([[s, 0]]); const q = [s];
   while (q.length > 0) { const c = q.shift()!; for (const nb of adj.get(c) || []) { if (!d.has(nb)) { d.set(nb, d.get(c)! + 1); q.push(nb); } } }
   return d;
-}
-
-// ============================================================
-// CURVED PATH — inspired by the reference image's flowing connector lines
-// ============================================================
-
-function connectorPath(x1: number, y1: number, x2: number, y2: number): string {
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-  const isVertical = Math.abs(dy) > Math.abs(dx);
-
-  if (isVertical) {
-    // Vertical-dominant: S-curve with horizontal offset
-    const bend = dx * 0.15;
-    return `M${x1},${y1} C${x1 + bend},${y1 + dy * 0.4} ${x2 - bend},${y1 + dy * 0.6} ${x2},${y2}`;
-  } else {
-    // Horizontal-dominant: smooth arc
-    const bend = dy * 0.2;
-    return `M${x1},${y1} C${x1 + dx * 0.4},${y1 + bend} ${x1 + dx * 0.6},${y2 - bend} ${x2},${y2}`;
-  }
 }
 
 // ============================================================
@@ -111,21 +138,19 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { nodes, edges, adj } = useMemo(() => buildMap(careers), [careers]);
 
-  // Checkpoint from store, fallback to c0-s1
   const checkpoint = store.careerCheckpoint && nodes.has(store.careerCheckpoint) ? store.careerCheckpoint : "c0-s1";
 
-  // Car position = checkpoint (where user actually is)
   const [carNodeId, setCarNodeId] = useState(checkpoint);
   const [isMoving, setIsMoving] = useState(false);
   const [carPos, setCarPos] = useState(() => {
     const nd = nodes.get(checkpoint); return nd ? { x: nd.x, y: nd.y } : { x: 0, y: 0 };
   });
+  const [carAngle, setCarAngle] = useState(-90);
+  const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  // Selected path (from checkpoint, not from car)
   const [selectedPath, setSelectedPath] = useState<string[] | null>(null);
   const [panelData, setPanelData] = useState<PanelData | null>(null);
 
-  // Pan + zoom state
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState(false);
@@ -133,7 +158,18 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
 
   const distances = useMemo(() => bfsDist(adj, carNodeId), [adj, carNodeId]);
 
-  // Edges and nodes on the selected path
+  // Pre-compute bezier points for all edges (both directions)
+  const edgeBeziers = useMemo(() => {
+    const map = new Map<string, BezierPts>();
+    edges.forEach((edge, ei) => {
+      const fn = nodes.get(edge.from)!, tn = nodes.get(edge.to)!;
+      const bp = getRoadBezier(fn.x, fn.y, tn.x, tn.y, ei);
+      map.set(`${edge.from}|${edge.to}`, bp);
+      map.set(`${edge.to}|${edge.from}`, { p0: bp.p3, p1: bp.p2, p2: bp.p1, p3: bp.p0 });
+    });
+    return map;
+  }, [edges, nodes]);
+
   const pathEdgeSet = useMemo(() => {
     const s = new Set<string>();
     if (!selectedPath) return s;
@@ -142,70 +178,121 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   }, [selectedPath]);
   const pathNodeSet = useMemo(() => new Set(selectedPath || []), [selectedPath]);
 
-  // Navigate car to a node — FORWARD ONLY (level must be >= current)
+  // Navigate — highlight from checkpoint, car follows bezier road path
   const navigateTo = useCallback(async (targetId: string) => {
-    if (isMoving || targetId === carNodeId) return;
+    if (isMoving) return;
+
+    // If clicking the node we're already on, toggle panel
+    if (targetId === carNodeId) {
+      const nd = nodes.get(targetId)!;
+      if (nd.careerIdx >= 0) {
+        if (panelData?.node.id === targetId) {
+          setPanelData(null);
+          setSelectedPath(null);
+        } else {
+          setPanelData({ node: nd, career: careers[nd.careerIdx] });
+          const ckptNode = nodes.get(checkpoint);
+          if (ckptNode) {
+            const [pf, pt] = nd.weight >= ckptNode.weight ? [checkpoint, targetId] : [targetId, checkpoint];
+            setSelectedPath(findBestPath(adj, nodes, pf, pt));
+          }
+        }
+      }
+      return;
+    }
+
     const targetNode = nodes.get(targetId);
-    const curNode = nodes.get(carNodeId);
-    if (!targetNode || !curNode) return;
-    // Block going backward (lower level = demotion)
-    if (targetNode.level < curNode.level) return;
+    const ckptNode = nodes.get(checkpoint);
+    if (!targetNode || !ckptNode) return;
 
-    const path = bfs(adj, carNodeId, targetId);
-    if (!path || path.length < 2) return;
+    // Highlight path: always between checkpoint and target
+    let pathFrom: string, pathTo: string;
+    if (targetNode.weight >= ckptNode.weight) {
+      pathFrom = checkpoint;
+      pathTo = targetId;
+    } else {
+      pathFrom = targetId;
+      pathTo = checkpoint;
+    }
+    const highlightPath = findBestPath(adj, nodes, pathFrom, pathTo);
+    setSelectedPath(highlightPath);
 
-    // Show path from checkpoint to target
-    const fullPath = bfs(adj, checkpoint, targetId);
-    setSelectedPath(fullPath);
+    // Car travels from current position to target
+    const travelPath = findBestPath(adj, nodes, carNodeId, targetId);
+    if (!travelPath || travelPath.length < 2) return;
+
     setIsMoving(true);
     setPanelData(null);
 
-    for (let i = 1; i < path.length; i++) {
-      const nd = nodes.get(path[i])!;
-      const from = { ...carPos };
-      const to = { x: nd.x, y: nd.y };
-      const dur = 350;
-      const t0 = performance.now();
-      await new Promise<void>((res) => {
-        function step(now: number) {
-          const t = Math.min(1, (now - t0) / dur);
-          const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-          setCarPos({ x: from.x + (to.x - from.x) * e, y: from.y + (to.y - from.y) * e });
-          if (t < 1) requestAnimationFrame(step); else res();
-        }
-        requestAnimationFrame(step);
-      });
-      setCarPos(to);
-      setCarNodeId(path[i]);
-      if (i < path.length - 1) await new Promise((r) => setTimeout(r, 50));
+    for (let i = 1; i < travelPath.length; i++) {
+      const fromId = travelPath[i - 1];
+      const toId = travelPath[i];
+      const bp = edgeBeziers.get(`${fromId}|${toId}`);
+
+      if (bp) {
+        // Animate along bezier curve
+        const curve = bp; // alias for closure narrowing
+        const moveDur = 450;
+        const mt0 = performance.now();
+        await new Promise<void>((res) => {
+          function step(now: number) {
+            const t = Math.min(1, (now - mt0) / moveDur);
+            const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            const [px, py] = evalBezier(e, curve);
+            const [tx, ty] = evalBezierTangent(e, curve);
+            setCarPos({ x: px, y: py });
+            setCarAngle(Math.atan2(ty, tx) * (180 / Math.PI));
+            if (t < 1) requestAnimationFrame(step); else res();
+          }
+          requestAnimationFrame(step);
+        });
+      } else {
+        // Fallback: straight line between nodes
+        const fromNd = nodes.get(fromId)!, toNd = nodes.get(toId)!;
+        const moveDur = 400;
+        const mt0 = performance.now();
+        await new Promise<void>((res) => {
+          function step(now: number) {
+            const t = Math.min(1, (now - mt0) / moveDur);
+            const e = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+            setCarPos({ x: fromNd.x + (toNd.x - fromNd.x) * e, y: fromNd.y + (toNd.y - fromNd.y) * e });
+            setCarAngle(Math.atan2(toNd.y - fromNd.y, toNd.x - fromNd.x) * (180 / Math.PI));
+            if (t < 1) requestAnimationFrame(step); else res();
+          }
+          requestAnimationFrame(step);
+        });
+      }
+
+      const nd = nodes.get(toId)!;
+      setCarPos({ x: nd.x, y: nd.y });
+      setCarNodeId(toId);
+      if (i < travelPath.length - 1) await new Promise((r) => setTimeout(r, 30));
     }
 
     setIsMoving(false);
-    const final = nodes.get(path[path.length - 1])!;
+    const final = nodes.get(travelPath[travelPath.length - 1])!;
     if (final.careerIdx >= 0) setPanelData({ node: final, career: careers[final.careerIdx] });
-  }, [isMoving, carNodeId, adj, nodes, careers, carPos, checkpoint]);
+  }, [isMoving, carNodeId, checkpoint, adj, nodes, careers, edgeBeziers, panelData]);
 
-  // Advance checkpoint to where the car is
   const advanceCheckpoint = useCallback(() => {
     store.setCareerCheckpoint(carNodeId);
     setSelectedPath(null);
   }, [carNodeId, store]);
 
-  // Keyboard — forward only (up, left, right — no down/demotion)
-  const findNeighbor = useCallback((dir: "up" | "left" | "right") => {
+  // Keyboard — all four directions
+  const findNeighbor = useCallback((dir: "up" | "down" | "left" | "right") => {
     const cur = nodes.get(carNodeId);
     if (!cur) return null;
-    let best: string | null = null;
-    let bestS = -Infinity;
+    let best: string | null = null, bestS = -Infinity;
     for (const nid of adj.get(carNodeId) || []) {
       const nd = nodes.get(nid)!;
-      // Never allow going to a lower level
-      if (nd.level < cur.level) continue;
       const dx = nd.x - cur.x, dy = nd.y - cur.y;
-      const valid = dir === "up" ? dy < -10 : dir === "left" ? dx < -10 : dx > 10;
-      if (!valid) continue;
-      const s = dir === "up" ? -dy - Math.abs(dx) * 0.3 : dir === "left" ? -dx - Math.abs(dy) * 0.3 : dx - Math.abs(dy) * 0.3;
-      if (s > bestS) { bestS = s; best = nid; }
+      let valid = false, s = 0;
+      if (dir === "up") { valid = dy < -10; s = -dy - Math.abs(dx) * 0.3; }
+      else if (dir === "down") { valid = dy > 10; s = dy - Math.abs(dx) * 0.3; }
+      else if (dir === "left") { valid = dx < -10; s = -dx - Math.abs(dy) * 0.3; }
+      else { valid = dx > 10; s = dx - Math.abs(dy) * 0.3; }
+      if (valid && s > bestS) { bestS = s; best = nid; }
     }
     return best;
   }, [carNodeId, nodes, adj]);
@@ -213,18 +300,18 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (isMoving) return;
-      let d: "up" | "left" | "right" | null = null;
+      let d: "up" | "down" | "left" | "right" | null = null;
       if (e.key === "ArrowUp" || e.key === "w") d = "up";
+      else if (e.key === "ArrowDown" || e.key === "s") d = "down";
       else if (e.key === "ArrowLeft" || e.key === "a") d = "left";
       else if (e.key === "ArrowRight" || e.key === "d") d = "right";
-      // ArrowDown blocked — no demotion
       if (d) { e.preventDefault(); const t = findNeighbor(d); if (t) navigateTo(t); }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [isMoving, findNeighbor, navigateTo]);
 
-  // Drag to pan
+  // Drag + Zoom
   const onPointerDown = (e: React.PointerEvent) => {
     if ((e.target as HTMLElement).closest("button, [data-clickable]")) return;
     setDragging(true);
@@ -237,14 +324,10 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   };
   const onPointerUp = () => setDragging(false);
 
-  // Scroll to zoom
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const h = (e: WheelEvent) => {
-      e.preventDefault();
-      setZoom((z) => Math.max(0.4, Math.min(2.5, z + (e.deltaY > 0 ? -0.08 : 0.08))));
-    };
+    const h = (e: WheelEvent) => { e.preventDefault(); setZoom((z) => Math.max(0.3, Math.min(2.5, z + (e.deltaY > 0 ? -0.08 : 0.08)))); };
     el.addEventListener("wheel", h, { passive: false });
     return () => el.removeEventListener("wheel", h);
   }, []);
@@ -258,7 +341,6 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
     if (d === 1) return "child";
     return "dim";
   }
-
   function edgeVis(a: string, b: string): "active" | "child" | "dim" {
     const k = [a, b].sort().join("|");
     if (pathEdgeSet.has(k)) return "active";
@@ -267,78 +349,57 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
     return "dim";
   }
 
-  // SVG viewBox — large enough for the full map
+  // ViewBox
   const allN = [...nodes.values()];
   const pad = 400;
   const minX = Math.min(...allN.map((n) => n.x)) - pad;
   const maxX = Math.max(...allN.map((n) => n.x)) + pad;
   const minY = Math.min(...allN.map((n) => n.y)) - pad;
   const maxY = Math.max(...allN.map((n) => n.y)) + pad;
-  const vw = maxX - minX;
-  const vh = maxY - minY;
-  // Compute container-to-svg ratio for pan
+  const vw = maxX - minX, vh = maxY - minY;
   const cw = containerRef.current?.clientWidth || 900;
   const ch = containerRef.current?.clientHeight || 700;
   const panScale = Math.max(vw / cw, vh / ch) / zoom;
 
   return (
-    <div
-      ref={containerRef}
+    <div ref={containerRef}
       className={`relative w-full h-full overflow-hidden bg-[#0f1117] select-none ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-    >
-      {/* Map layer — zoom + car-centering + pan */}
-      <svg
-        className="w-full h-full"
-        viewBox={`0 0 ${vw} ${vh}`}
-        preserveAspectRatio="xMidYMid meet"
-      >
+      onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+
+      <svg className="w-full h-full" viewBox={`0 0 ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet">
         <g transform={`translate(${vw / 2}, ${vh * 0.55}) scale(${zoom}) translate(${-carPos.x + pan.x * panScale}, ${-carPos.y + pan.y * panScale})`}>
 
-          {/* ===== EDGES ===== */}
+          {/* EDGES — clean thin roads */}
           {edges.map((edge) => {
-            const fn = nodes.get(edge.from)!;
-            const tn = nodes.get(edge.to)!;
+            const fn = nodes.get(edge.from)!, tn = nodes.get(edge.to)!;
             const vis = edgeVis(edge.from, edge.to);
-            const d = connectorPath(fn.x, fn.y, tn.x, tn.y);
+            const bp = edgeBeziers.get(`${edge.from}|${edge.to}`);
+            if (!bp) return null;
+            const d = bezierPath(bp);
             const burnout = fn.burnout || tn.burnout;
-
             return (
               <g key={`${edge.from}-${edge.to}`} opacity={vis === "dim" ? 0.15 : 1}>
-                {/* Road casing */}
-                <path d={d} fill="none" stroke="#1e2028" strokeWidth={RW + 6} strokeLinecap="round" />
+                {/* Road border */}
+                <path d={d} fill="none" stroke="#1a1d24" strokeWidth={RW + 4} strokeLinecap="round" />
                 {/* Road surface */}
                 <path d={d} fill="none"
-                  stroke={vis === "active" ? (burnout ? "#7f1d1d" : "#1e3a5f") : "#1a1d24"}
+                  stroke={vis === "active" ? (burnout ? "#1c1517" : "#131a2a") : "#16181e"}
                   strokeWidth={RW} strokeLinecap="round" />
-                {/* Active route overlay */}
+                {/* Active glow center line */}
                 {vis === "active" && (
                   <path d={d} fill="none"
                     stroke={burnout ? "#ef4444" : "#3b82f6"}
-                    strokeWidth={5} strokeLinecap="round" opacity={0.8} />
+                    strokeWidth={4} strokeLinecap="round" opacity={0.6} />
                 )}
-                {/* Center dashes */}
+                {/* Center dashed line */}
                 <path d={d} fill="none"
-                  stroke={vis === "active" ? "rgba(255,255,255,0.5)" : vis === "child" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}
-                  strokeWidth={1.5} strokeDasharray="6 10" strokeLinecap="round" />
-                {/* Edge lines */}
-                {vis !== "dim" && (() => {
-                  const dx = tn.x - fn.x, dy = tn.y - fn.y, len = Math.hypot(dx, dy);
-                  if (len < 1) return null;
-                  const nx = (-dy / len) * (RW / 2 - 1), ny = (dx / len) * (RW / 2 - 1);
-                  return [-1, 1].map((s) => (
-                    <line key={s} x1={fn.x + nx * s} y1={fn.y + ny * s} x2={tn.x + nx * s} y2={tn.y + ny * s}
-                      stroke={burnout && vis === "active" ? "rgba(239,68,68,0.3)" : "rgba(255,255,255,0.08)"} strokeWidth={1} />
-                  ));
-                })()}
+                  stroke={vis === "active" ? "rgba(255,255,255,0.35)" : vis === "child" ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)"}
+                  strokeWidth={1} strokeDasharray="5 8" strokeLinecap="round" />
               </g>
             );
           })}
 
-          {/* ===== NODES ===== */}
+          {/* NODES */}
           {[...nodes.values()].map((node) => {
             const vis = nodeVis(node.id);
             const isCkpt = vis === "checkpoint";
@@ -347,67 +408,108 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
             const isChild = vis === "child";
             const isDim = vis === "dim";
             const isRoot = node.id === "root";
-
+            const isHovered = hoveredNode === node.id && !isRoot && !isDim;
+            const isSelected = panelData?.node.id === node.id;
             return (
               <g key={node.id} data-clickable
-                className={isDim || node.level < (nodes.get(carNodeId)?.level ?? 0) ? "" : "cursor-pointer"}
-                onClick={() => {
-                  if (isRoot || isMoving) return;
-                  const curLevel = nodes.get(carNodeId)?.level ?? 0;
-                  if (node.level < curLevel) return; // no demotion
-                  navigateTo(node.id);
-                }}
-                opacity={isDim ? 0.12 : 1}
-              >
-                {/* Checkpoint glow */}
+                className={isDim && !isRoot ? "" : "cursor-pointer"}
+                onClick={() => { if (isRoot || (isMoving && node.id !== carNodeId)) return; navigateTo(node.id); }}
+                onMouseEnter={() => !isRoot && setHoveredNode(node.id)}
+                onMouseLeave={() => setHoveredNode(null)}
+                opacity={isDim ? 0.12 : 1}>
+
+                {/* Hover outline ring */}
+                {isHovered && !isCkpt && !isSelected && (
+                  <circle cx={node.x} cy={node.y} r={NR + 6}
+                    fill="none" stroke="#3b82f6" strokeWidth={2} opacity={0.5} />
+                )}
+
+                {/* Selected glow */}
+                {isSelected && (
+                  <>
+                    <circle cx={node.x} cy={node.y} r={NR + 10} fill="rgba(59,130,246,0.08)" />
+                    <circle cx={node.x} cy={node.y} r={NR + 6}
+                      fill="none" stroke="#60a5fa" strokeWidth={2.5} opacity={0.7} />
+                  </>
+                )}
+
+                {/* Checkpoint pulse */}
                 {isCkpt && (
                   <circle cx={node.x} cy={node.y} r={NR + 12} fill="none" stroke="#3b82f6" strokeWidth={2} opacity={0.2}>
                     <animate attributeName="r" values={`${NR + 8};${NR + 16};${NR + 8}`} dur="2.5s" repeatCount="indefinite" />
                   </circle>
                 )}
-                {/* Child ring */}
-                {isChild && (
-                  <circle cx={node.x} cy={node.y} r={NR + 5} fill="none" stroke="#3b82f6" strokeWidth={1.5} opacity={0.2} />
-                )}
-                {/* Main circle */}
+
+                {/* Child indicator */}
+                {isChild && <circle cx={node.x} cy={node.y} r={NR + 5} fill="none" stroke="#3b82f6" strokeWidth={1.5} opacity={0.2} />}
+
+                {/* Main node circle */}
                 <circle cx={node.x} cy={node.y} r={NR}
-                  fill={isCkpt ? "#3b82f6" : isCar ? "#2563eb" : isPath ? "#1e3a5f" : isChild ? "#1a1d24" : "#14161c"}
-                  stroke={isCkpt || isCar ? "#60a5fa" : isPath ? "#3b82f6" : isChild ? "#334155" : "#1e2028"}
-                  strokeWidth={isCkpt ? 3 : 2} />
-                {/* Inner */}
+                  fill={
+                    isSelected ? "#2563eb"
+                    : isCkpt ? "#3b82f6"
+                    : isCar ? "#2563eb"
+                    : isPath ? "#1e3a5f"
+                    : isHovered ? "#1e293b"
+                    : isChild ? "#1a1d24"
+                    : "#14161c"
+                  }
+                  stroke={
+                    isSelected ? "#93c5fd"
+                    : isCkpt || isCar ? "#60a5fa"
+                    : isPath ? "#3b82f6"
+                    : isHovered ? "#3b82f6"
+                    : isChild ? "#334155"
+                    : "#1e2028"
+                  }
+                  strokeWidth={isSelected ? 3 : isCkpt ? 3 : isHovered ? 2.5 : 2} />
+
+                {/* Center dot for checkpoint / current */}
                 {(isCkpt || isCar) && <circle cx={node.x} cy={node.y} r={6} fill="white" />}
-                {!isCkpt && !isCar && !isDim && !isRoot && (
-                  <text x={node.x} y={node.y + 4} textAnchor="middle" fill={isChild ? "#94a3b8" : "#475569"} fontSize={9} fontWeight={700}>
-                    {node.stageIdx + 1}
-                  </text>
+
+                {/* Stage number */}
+                {!isCkpt && !isCar && !isDim && !isRoot && !isSelected && (
+                  <text x={node.x} y={node.y + 4} textAnchor="middle" fill={isChild ? "#94a3b8" : "#475569"} fontSize={9} fontWeight={700}>{node.stageIdx + 1}</text>
                 )}
+
+                {/* Selected checkmark */}
+                {isSelected && !isCkpt && !isCar && (
+                  <circle cx={node.x} cy={node.y} r={6} fill="white" />
+                )}
+
+                {/* Root dot */}
                 {isRoot && <text x={node.x} y={node.y + 4} textAnchor="middle" fill="#64748b" fontSize={10} fontWeight={700}>●</text>}
-                {/* Burnout badge */}
+
+                {/* Burnout indicator */}
                 {node.burnout && !isDim && (
                   <g transform={`translate(${node.x + NR * 0.7}, ${node.y - NR * 0.7})`}>
                     <circle r={6} fill="#ef4444" /><text x={0} y={3} textAnchor="middle" fill="white" fontSize={7} fontWeight={800}>!</text>
                   </g>
                 )}
+
                 {/* Label */}
                 {!isDim && (
                   <g>
                     <rect x={node.x - 58} y={node.y + NR + 5} width={116} height={18} rx={9}
-                      fill={isCkpt ? "rgba(59,130,246,0.15)" : "rgba(15,17,23,0.9)"}
-                      stroke={isCkpt ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.05)"} strokeWidth={0.5} />
+                      fill={isSelected ? "rgba(37,99,235,0.2)" : isCkpt ? "rgba(59,130,246,0.15)" : "rgba(15,17,23,0.9)"}
+                      stroke={isSelected ? "rgba(96,165,250,0.3)" : isCkpt ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.05)"} strokeWidth={0.5} />
                     <text x={node.x} y={node.y + NR + 17} textAnchor="middle"
-                      fill={isCkpt ? "#93c5fd" : isChild ? "#cbd5e1" : "#64748b"} fontSize={8} fontWeight={isCkpt || isChild ? 700 : 500}>
-                      {node.label.length > 20 ? node.label.slice(0, 18) + "…" : node.label}
+                      fill={isSelected ? "#93c5fd" : isCkpt ? "#93c5fd" : isChild ? "#cbd5e1" : "#64748b"}
+                      fontSize={8} fontWeight={isSelected || isCkpt || isChild ? 700 : 500}>
+                      {node.label.length > 20 ? node.label.slice(0, 18) + "\u2026" : node.label}
                     </text>
                   </g>
                 )}
-                {/* Checkpoint badge */}
+
+                {/* YOU badge */}
                 {isCkpt && !isRoot && (
                   <g transform={`translate(${node.x}, ${node.y - NR - 12})`}>
                     <rect x={-20} y={-7} width={40} height={14} rx={7} fill="#3b82f6" />
                     <text x={0} y={3} textAnchor="middle" fill="white" fontSize={7} fontWeight={800}>YOU</text>
                   </g>
                 )}
-                {/* Career label */}
+
+                {/* Career title above first stage */}
                 {node.stageIdx === 0 && !isRoot && !isDim && (
                   <text x={node.x} y={node.y - NR - 22} textAnchor="middle"
                     fill={node.burnout ? "#f87171" : "#818cf8"} fontSize={7} fontWeight={800} letterSpacing="0.1em" opacity={0.6}>
@@ -418,115 +520,103 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
             );
           })}
 
-          {/* ===== CAR (larger, detailed) ===== */}
-          <g transform={`translate(${carPos.x}, ${carPos.y})`}>
+          {/* CAR — yellow sports car, top-down view */}
+          <g transform={`translate(${carPos.x}, ${carPos.y}) rotate(${carAngle + 90})`}>
             {/* Shadow */}
-            <ellipse rx={20} ry={11} fill="rgba(0,0,0,0.25)" transform="translate(2,5)" />
-            {/* Wheels */}
-            {[[-16,-24],[16,-24],[-16,22],[16,22]].map(([wx,wy],i) => (
-              <rect key={i} x={wx-4} y={wy-6} width={8} height={12} rx={2.5} fill="#0f172a" />
-            ))}
+            <ellipse rx={15} ry={24} fill="rgba(0,0,0,0.3)" transform="translate(2,3)" />
             {/* Body */}
-            <rect x={-17} y={-28} width={34} height={56} rx={10} fill="#e2e8f0" stroke="rgba(255,255,255,0.15)" strokeWidth={0.8} />
-            {/* Roof highlight */}
-            <rect x={-10} y={-10} width={20} height={18} rx={5} fill="rgba(255,255,255,0.06)" />
+            <rect x={-13} y={-24} width={26} height={48} rx={10} fill="#F5C542" stroke="#D4A830" strokeWidth={0.8} />
+            {/* Hood sculpt lines */}
+            <path d="M-10,-22 Q0,-25 10,-22" fill="none" stroke="#D4A830" strokeWidth={0.6} />
+            <path d="M-8,-18 L8,-18" stroke="#D4A830" strokeWidth={0.3} opacity={0.5} />
             {/* Windshield */}
-            <path d="M-11,-22 L11,-22 L9,-9 L-9,-9Z" fill="rgba(59,130,246,0.35)" />
+            <path d="M-9,-15 L9,-15 L7,-5 L-7,-5 Z" fill="#1a1a2e" opacity={0.9} />
+            {/* Roof / cabin */}
+            <rect x={-7} y={-5} width={14} height={10} rx={2} fill="#E8B83A" />
             {/* Rear window */}
-            <path d="M-9,9 L9,9 L11,22 L-11,22Z" fill="rgba(30,41,59,0.3)" />
-            {/* Side mirrors */}
-            <ellipse cx={-19} cy={-14} rx={3} ry={4.5} fill="#cbd5e1" />
-            <ellipse cx={19} cy={-14} rx={3} ry={4.5} fill="#cbd5e1" />
+            <path d="M-7,5 L7,5 L9,14 L-9,14 Z" fill="#1a1a2e" opacity={0.9} />
+            {/* Trunk line */}
+            <path d="M-8,17 L8,17" stroke="#D4A830" strokeWidth={0.5} opacity={0.5} />
             {/* Headlights */}
-            <rect x={-10} y={-28.5} width={7} height={3.5} rx={1.5} fill="#fde68a" opacity={0.95} />
-            <rect x={3} y={-28.5} width={7} height={3.5} rx={1.5} fill="#fde68a" opacity={0.95} />
+            <ellipse cx={-8} cy={-23} rx={3} ry={1.5} fill="#e8e8e8" opacity={0.9} />
+            <ellipse cx={8} cy={-23} rx={3} ry={1.5} fill="#e8e8e8" opacity={0.9} />
             {/* Taillights */}
-            <rect x={-10} y={25.5} width={7} height={2.5} rx={1} fill="#ef4444" opacity={0.8} />
-            <rect x={3} y={25.5} width={7} height={2.5} rx={1} fill="#ef4444" opacity={0.8} />
-            {/* Panel lines */}
-            <line x1={-13} y1={-22} x2={13} y2={-22} stroke="rgba(0,0,0,0.08)" strokeWidth={0.5} />
-            <line x1={-13} y1={22} x2={13} y2={22} stroke="rgba(0,0,0,0.08)" strokeWidth={0.5} />
+            <rect x={-10} y={22} width={5} height={2.5} rx={1.2} fill="#ef4444" opacity={0.9} />
+            <rect x={5} y={22} width={5} height={2.5} rx={1.2} fill="#ef4444" opacity={0.9} />
+            {/* Side mirrors */}
+            <ellipse cx={-15} cy={-3} rx={2.5} ry={1.5} fill="#F5C542" stroke="#D4A830" strokeWidth={0.3} />
+            <ellipse cx={15} cy={-3} rx={2.5} ry={1.5} fill="#F5C542" stroke="#D4A830" strokeWidth={0.3} />
+            {/* Door handles */}
+            <rect x={-12.5} y={1} width={3} height={0.8} rx={0.4} fill="#D4A830" opacity={0.6} />
+            <rect x={9.5} y={1} width={3} height={0.8} rx={0.4} fill="#D4A830" opacity={0.6} />
           </g>
         </g>
       </svg>
 
-      {/* ===== D-PAD (no down — forward only) ===== */}
+      {/* D-PAD — 4 directions */}
       <div className="absolute bottom-6 left-6 z-10">
-        <div className="relative w-[120px] h-[100px]">
-          {([
-            ["up", "top-0 left-1/2 -translate-x-1/2", ChevronUp],
-            ["left", "bottom-0 left-0", ChevronLeft],
-            ["right", "bottom-0 right-0", ChevronRight],
-          ] as const).map(([d, cls, Icon]) => (
-            <button key={d} onClick={() => { const t = findNeighbor(d); if (t) navigateTo(t); }} disabled={isMoving}
-              className={`absolute ${cls} w-11 h-11 bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 transition-all disabled:opacity-20 shadow-lg`}>
-              <Icon className="w-5 h-5" />
-            </button>
-          ))}
+        <div className="relative w-[120px] h-[120px]">
+          <button onClick={() => { const t = findNeighbor("up"); if (t) navigateTo(t); }} disabled={isMoving}
+            className="absolute top-0 left-1/2 -translate-x-1/2 w-11 h-11 bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 transition-all disabled:opacity-20 shadow-lg">
+            <ChevronUp className="w-5 h-5" />
+          </button>
+          <button onClick={() => { const t = findNeighbor("left"); if (t) navigateTo(t); }} disabled={isMoving}
+            className="absolute top-1/2 left-0 -translate-y-1/2 w-11 h-11 bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 transition-all disabled:opacity-20 shadow-lg">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <button onClick={() => { const t = findNeighbor("right"); if (t) navigateTo(t); }} disabled={isMoving}
+            className="absolute top-1/2 right-0 -translate-y-1/2 w-11 h-11 bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 transition-all disabled:opacity-20 shadow-lg">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+          <button onClick={() => { const t = findNeighbor("down"); if (t) navigateTo(t); }} disabled={isMoving}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-11 h-11 bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 active:bg-blue-500/20 transition-all disabled:opacity-20 shadow-lg">
+            <ChevronDown className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
-      {/* ===== ZOOM CONTROLS ===== */}
+      {/* ZOOM */}
       <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
         <div className="bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl p-1 shadow-lg">
-          <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.2))}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
-            <ZoomIn className="w-4 h-4" />
-          </button>
+          <button onClick={() => setZoom((z) => Math.min(2.5, z + 0.2))} className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-400 transition-all"><ZoomIn className="w-4 h-4" /></button>
           <div className="h-px bg-[#2a2d35] mx-2" />
-          <button onClick={() => setZoom((z) => Math.max(0.4, z - 0.2))}
-            className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all">
-            <ZoomOut className="w-4 h-4" />
-          </button>
+          <button onClick={() => setZoom((z) => Math.max(0.3, z - 0.2))} className="w-10 h-10 rounded-lg flex items-center justify-center text-slate-400 hover:text-blue-400 transition-all"><ZoomOut className="w-4 h-4" /></button>
         </div>
       </div>
 
-      {/* Status + Advance */}
+      {/* STATUS */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
         <div className="bg-[#1a1d24]/90 backdrop-blur border border-[#2a2d35] rounded-xl px-3 py-2 shadow-lg flex items-center gap-2">
           <div className={`w-2 h-2 rounded-full ${isMoving ? "bg-green-500 animate-pulse" : "bg-blue-500"}`} />
-          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            {isMoving ? "Moving" : "Ready"}
-          </span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isMoving ? "Moving" : "Ready"}</span>
         </div>
         {carNodeId !== checkpoint && !isMoving && (
-          <button onClick={advanceCheckpoint} data-clickable
-            className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3 py-2 flex items-center gap-1.5 shadow-lg transition-all active:scale-95">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">I&apos;m here now</span>
+          <button onClick={advanceCheckpoint} data-clickable className="bg-blue-600 hover:bg-blue-500 text-white rounded-xl px-3 py-2 flex items-center gap-1.5 shadow-lg transition-all active:scale-95">
+            <CheckCircle2 className="w-3.5 h-3.5" /><span className="text-[10px] font-bold uppercase tracking-widest">I&apos;m here now</span>
           </button>
         )}
       </div>
 
-      {/* Hint */}
+      {/* HINT */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 bg-[#1a1d24]/80 backdrop-blur border border-[#2a2d35] rounded-full px-4 py-1.5 shadow-lg">
         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          <span className="text-blue-400">Click</span> node · <span className="text-blue-400">↑←→</span> navigate · <span className="text-blue-400">Drag</span> pan · <span className="text-blue-400">Scroll</span> zoom
+          <span className="text-blue-400">Click</span> any node · <span className="text-blue-400">↑↓←→</span> navigate · <span className="text-blue-400">Scroll</span> zoom
         </span>
       </div>
 
-      {/* ===== PANEL ===== */}
+      {/* PANEL */}
       <AnimatePresence>
         {panelData && (
-          <motion.div
-            initial={{ x: "100%", opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "100%", opacity: 0 }}
+          <motion.div initial={{ x: "100%", opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: "100%", opacity: 0 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-0 right-0 bottom-0 w-full md:w-[360px] z-20 bg-[#12141a]/95 backdrop-blur-xl border-l border-[#2a2d35] shadow-2xl overflow-y-auto"
-          >
+            className="absolute top-0 right-0 bottom-0 w-full md:w-[360px] z-20 bg-[#12141a]/95 backdrop-blur-xl border-l border-[#2a2d35] shadow-2xl overflow-y-auto">
             <div className="sticky top-0 z-10 bg-[#12141a]/80 backdrop-blur border-b border-[#2a2d35] px-5 py-4 flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">
-                  {panelData.node.burnout ? "⚠ High Stress" : "Career Stage"}
-                </div>
+                <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">{panelData.node.burnout ? "\u26A0 High Stress" : "Career Stage"}</div>
                 <h3 className="text-lg font-extrabold text-white tracking-tight">{panelData.node.label}</h3>
                 <p className="text-xs text-slate-500">{panelData.career.title}</p>
               </div>
-              <button onClick={() => { setPanelData(null); setSelectedPath(null); }} data-clickable
-                className="w-8 h-8 rounded-lg hover:bg-[#1e2028] flex items-center justify-center">
-                <X className="w-4 h-4 text-slate-500" />
-              </button>
+              <button onClick={() => { setPanelData(null); setSelectedPath(null); }} data-clickable className="w-8 h-8 rounded-lg hover:bg-[#1e2028] flex items-center justify-center"><X className="w-4 h-4 text-slate-500" /></button>
             </div>
             <div className="px-5 py-5 space-y-4">
               <div className="grid grid-cols-3 gap-2">
@@ -556,9 +646,7 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
                   const isHere = i === panelData.node.stageIdx;
                   return (
                     <div key={i} className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg mb-1 ${isHere ? "bg-blue-500/10 border border-blue-500/20" : ""}`}>
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${
-                        isHere ? "bg-blue-600 text-white" : i < panelData.node.stageIdx ? "bg-blue-900 text-blue-400" : "bg-[#1a1d24] text-slate-600 border border-[#2a2d35]"
-                      }`}>{i + 1}</div>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${isHere ? "bg-blue-600 text-white" : i < panelData.node.stageIdx ? "bg-blue-900 text-blue-400" : "bg-[#1a1d24] text-slate-600 border border-[#2a2d35]"}`}>{i + 1}</div>
                       <span className={`text-xs ${isHere ? "text-blue-300 font-bold" : "text-slate-500"}`}>{role}</span>
                     </div>
                   );

@@ -7,6 +7,7 @@ import {
   CheckCircle2, Circle, ArrowRight, Clock,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { GlowCard } from "@/components/ui/spotlight-card";
 
 const TABS = ["Overview", "Skills", "Interests", "Progress"] as const;
 type Tab = (typeof TABS)[number];
@@ -69,7 +70,7 @@ export default function ProfilePage() {
         {activeTab === "Overview" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+              <GlowCard>
                 <div className="flex items-center gap-2 mb-3">
                   <GraduationCap className="w-4 h-4 text-secondary" />
                   <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -77,8 +78,8 @@ export default function ProfilePage() {
                   </span>
                 </div>
                 <p className="font-headline font-bold">{profile.education}</p>
-              </div>
-              <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+              </GlowCard>
+              <GlowCard>
                 <div className="flex items-center gap-2 mb-3">
                   <Briefcase className="w-4 h-4 text-primary" />
                   <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -88,9 +89,9 @@ export default function ProfilePage() {
                 <p className="font-headline font-bold">
                   {statusLabels[profile.currentStatus]}
                 </p>
-              </div>
+              </GlowCard>
             </div>
-            <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+            <GlowCard>
               <div className="flex items-center gap-2 mb-3">
                 <Target className="w-4 h-4 text-primary" />
                 <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -98,7 +99,7 @@ export default function ProfilePage() {
                 </span>
               </div>
               <p className="text-on-surface-variant leading-relaxed">{profile.currentGoal}</p>
-            </div>
+            </GlowCard>
             <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6">
               <p className="text-sm text-on-surface-variant leading-relaxed">
                 <span className="font-bold text-primary">Summary: </span>
@@ -111,7 +112,7 @@ export default function ProfilePage() {
         {/* Skills */}
         {activeTab === "Skills" && (
           <div className="space-y-4">
-            <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+            <GlowCard>
               <div className="flex items-center gap-2 mb-4">
                 <Zap className="w-4 h-4 text-primary" />
                 <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -128,8 +129,8 @@ export default function ProfilePage() {
                   </div>
                 ))}
               </div>
-            </div>
-            <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+            </GlowCard>
+            <GlowCard>
               <div className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant mb-3">
                 Skills matched to career paths
               </div>
@@ -144,13 +145,13 @@ export default function ProfilePage() {
                   </span>
                 </div>
               ))}
-            </div>
+            </GlowCard>
           </div>
         )}
 
         {/* Interests */}
         {activeTab === "Interests" && (
-          <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+          <GlowCard>
             <div className="flex items-center gap-2 mb-4">
               <Heart className="w-4 h-4 text-secondary" />
               <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -168,13 +169,13 @@ export default function ProfilePage() {
                 </div>
               ))}
             </div>
-          </div>
+          </GlowCard>
         )}
 
         {/* Progress */}
         {activeTab === "Progress" && (
           <div className="space-y-6">
-            <div className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10">
+            <GlowCard>
               <div className="flex items-center gap-2 mb-4">
                 <Clock className="w-4 h-4 text-primary" />
                 <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
@@ -187,14 +188,11 @@ export default function ProfilePage() {
               <p className="text-xs text-on-surface-variant">
                 Based on your profile and career analysis
               </p>
-            </div>
+            </GlowCard>
 
             {/* Career progression per path */}
             {analysis.career_matches.map((career, i) => (
-              <div
-                key={i}
-                className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10"
-              >
+              <GlowCard key={i} glowColor={i === 0 ? "purple" : "blue"}>
                 <h4 className="font-headline font-bold text-sm mb-4">{career.title}</h4>
                 <div className="space-y-0">
                   {career.progression.map((role, j) => {
@@ -230,7 +228,7 @@ export default function ProfilePage() {
                     );
                   })}
                 </div>
-              </div>
+              </GlowCard>
             ))}
           </div>
         )}

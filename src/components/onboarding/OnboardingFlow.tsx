@@ -8,6 +8,7 @@ import {
   Clock, Moon, Brain, Target, ArrowRight, ArrowLeft,
   X, Plus, Loader2,
 } from "lucide-react";
+import Logo from "@/components/ui/logo";
 import { useStore } from "@/lib/store";
 import { calculateBurnoutScore } from "@/lib/burnout";
 import type { UserProfile, CurrentStatus, EmotionalState, CareerStage } from "@/types";
@@ -81,7 +82,7 @@ function TagInput({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())}
           placeholder={placeholder}
-          className="flex-1 px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+          className="flex-1 px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-2xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300"
         />
         <button
           type="button"
@@ -185,6 +186,7 @@ export default function OnboardingFlow() {
       if (!res.ok) throw new Error("Analysis failed");
       const analysis = await res.json();
       store.setAnalysis(analysis);
+      if (analysis.profileId) store.setProfileId(analysis.profileId);
       router.push("/dashboard");
     } catch {
       setError("Something went wrong. Please try again.");
@@ -205,13 +207,13 @@ export default function OnboardingFlow() {
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">
-      {/* Header */}
-      <nav className="bg-surface/60 backdrop-blur-xl border-b border-outline-variant/15 px-6 py-4">
+      {/* Header — glassmorphic with logo */}
+      <nav className="bg-surface/70 backdrop-blur-xl border-b border-outline-variant/15 px-6 py-3.5">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/" className="font-headline font-bold text-on-surface tracking-tighter text-lg">
-            Career GPS
+          <a href="/" aria-label="Career GPS home">
+            <Logo className="h-6 w-auto" />
           </a>
-          <span className="text-xs font-label text-on-surface-variant tracking-widest uppercase">
+          <span className="text-[10px] font-label text-on-surface-variant tracking-widest uppercase font-bold">
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
@@ -245,7 +247,7 @@ export default function OnboardingFlow() {
           </div>
 
           {/* Form Card */}
-          <div className="glass-panel rounded-2xl border border-outline-variant/10 p-8 md:p-10">
+          <div className="glass-panel rounded-3xl border border-outline-variant/10 p-8 md:p-10">
             <AnimatePresence mode="wait">
               <motion.div
                 key={step}
@@ -258,7 +260,7 @@ export default function OnboardingFlow() {
                 {step === 0 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">
                         Let&apos;s get to know you
                       </h2>
                       <p className="text-on-surface-variant">
@@ -276,7 +278,7 @@ export default function OnboardingFlow() {
                           value={form.name}
                           onChange={(e) => update("name", e.target.value)}
                           placeholder="Your first name"
-                          className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                          className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-2xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300"
                         />
                       </div>
 
@@ -289,7 +291,7 @@ export default function OnboardingFlow() {
                           value={form.education}
                           onChange={(e) => update("education", e.target.value)}
                           placeholder="e.g. Bachelor's in Computer Science"
-                          className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
+                          className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-2xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300"
                         />
                       </div>
 
@@ -303,7 +305,7 @@ export default function OnboardingFlow() {
                               key={opt.value}
                               type="button"
                               onClick={() => update("currentStatus", opt.value)}
-                              className={`p-4 rounded-xl border text-left transition-all ${
+                              className={`p-4 rounded-2xl border text-left transition-all duration-300 ${
                                 form.currentStatus === opt.value
                                   ? "border-primary/40 bg-primary/10"
                                   : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"
@@ -333,7 +335,7 @@ export default function OnboardingFlow() {
                               key={opt.value}
                               type="button"
                               onClick={() => update("careerStage", opt.value)}
-                              className={`p-3 rounded-xl border text-left transition-all text-sm font-headline font-bold ${
+                              className={`p-3 rounded-2xl border text-left transition-all duration-300 text-sm font-headline font-bold ${
                                 form.careerStage === opt.value
                                   ? "border-primary/40 bg-primary/10"
                                   : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"
@@ -352,7 +354,7 @@ export default function OnboardingFlow() {
                 {step === 1 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">
                         What do you bring to the table?
                       </h2>
                       <p className="text-on-surface-variant">
@@ -394,7 +396,7 @@ export default function OnboardingFlow() {
                 {step === 2 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">
                         What does your week look like?
                       </h2>
                       <p className="text-on-surface-variant">
@@ -473,7 +475,7 @@ export default function OnboardingFlow() {
                 {step === 3 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">
                         How are you feeling right now?
                       </h2>
                       <p className="text-on-surface-variant">
@@ -487,7 +489,7 @@ export default function OnboardingFlow() {
                           key={opt.value}
                           type="button"
                           onClick={() => update("emotionalState", opt.value)}
-                          className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
+                          className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-300 ${
                             form.emotionalState === opt.value
                               ? "border-primary/40 bg-primary/10"
                               : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"
@@ -513,7 +515,7 @@ export default function OnboardingFlow() {
                 {step === 4 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">
                         What are you trying to achieve?
                       </h2>
                       <p className="text-on-surface-variant">
@@ -526,7 +528,7 @@ export default function OnboardingFlow() {
                       onChange={(e) => update("currentGoal", e.target.value)}
                       placeholder="e.g. I want to land my first developer job within 6 months while keeping my sanity intact"
                       rows={4}
-                      className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all resize-none"
+                      className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-2xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300 resize-none"
                     />
 
                     <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
@@ -551,7 +553,7 @@ export default function OnboardingFlow() {
               <button
                 onClick={back}
                 disabled={step === 0}
-                className="flex items-center gap-2 text-sm font-label font-semibold text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest disabled:opacity-30"
+                className="flex items-center gap-2 text-sm font-headline font-bold text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest disabled:opacity-30"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -560,24 +562,27 @@ export default function OnboardingFlow() {
               <button
                 onClick={next}
                 disabled={!canProceed() || loading}
-                className="flex items-center gap-3 bg-gradient-to-r from-primary to-primary-container text-on-primary font-label text-sm font-extrabold py-4 px-10 rounded-xl shadow-xl hover:shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="relative overflow-hidden flex items-center gap-3 font-headline font-bold text-sm py-3.5 px-8 rounded-full bg-white text-surface group/fill disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : step < STEPS.length - 1 ? (
-                  <>
-                    Continue
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                ) : (
-                  <>
-                    Generate My Roadmap
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                <span className="absolute inset-0 z-0 bg-gradient-to-r from-primary to-primary-container rounded-[inherit] translate-y-full group-hover/fill:translate-y-0 transition-transform duration-500 ease-out" />
+                <span className="relative z-10 flex items-center gap-3 transition-colors duration-150 group-hover/fill:text-white">
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Analyzing...
+                    </>
+                  ) : step < STEPS.length - 1 ? (
+                    <>
+                      Continue
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      Generate My Roadmap
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </span>
               </button>
             </div>
           </div>

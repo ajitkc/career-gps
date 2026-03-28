@@ -12,6 +12,7 @@ const defaultState: AppState = {
   checkIns: [],
   isLoading: false,
   careerCheckpoint: null,
+  profileId: null,
 };
 
 interface StoreContextType extends AppState {
@@ -21,6 +22,7 @@ interface StoreContextType extends AppState {
   addCheckIn: (input: CheckInInput, response: CheckInResponse) => void;
   setLoading: (loading: boolean) => void;
   setCareerCheckpoint: (nodeId: string) => void;
+  setProfileId: (id: string) => void;
   reset: () => void;
 }
 
@@ -50,10 +52,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AppState>(defaultState);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage on mount, then check DB if needed
   useEffect(() => {
-    setState(loadState());
+    const loaded = loadState();
+    setState(loaded);
     setHydrated(true);
+
+    // If we have a profileId but no analysis, try fetching from Supabase
+    if (loaded.profileId && !loaded.analysis) {
+      fetch(`/api/profile?id=${loaded.profileId}`)
+        .then((r) => r.ok ? r.json() : null)
+        .then((data) => {
+          if (data?.profile && data?.analysis) {
+            setState((s) => ({ ...s, profile: data.profile, analysis: data.analysis }));
+          }
+        })
+        .catch(() => { /* silent — localStorage data is still available */ });
+    }
   }, []);
 
   // Persist on every change (after hydration)
@@ -88,6 +103,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, careerCheckpoint }));
   }, []);
 
+  const setProfileId = useCallback((profileId: string) => {
+    setState((s) => ({ ...s, profileId }));
+  }, []);
+
   const reset = useCallback(() => {
     setState(defaultState);
     if (typeof window !== "undefined") localStorage.removeItem(STORAGE_KEY);
@@ -103,6 +122,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addCheckIn,
         setLoading,
         setCareerCheckpoint,
+        setProfileId,
         reset,
       }}
     >

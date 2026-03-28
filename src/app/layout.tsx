@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Manrope, Inter } from "next/font/google";
+import { Instrument_Sans, Instrument_Serif } from "next/font/google";
 import { StoreProvider } from "@/lib/store";
 import "./globals.css";
 
-const manrope = Manrope({
-  variable: "--font-headline",
+const instrumentSans = Instrument_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const inter = Inter({
-  variable: "--font-body",
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-serif",
   subsets: ["latin"],
   display: "swap",
+  weight: "400",
+  style: "italic",
 });
 
 export const metadata: Metadata = {
@@ -27,7 +29,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${manrope.variable} ${inter.variable} dark`}>
+    <html lang="en" className={`${instrumentSans.variable} ${instrumentSerif.variable} dark`}>
       <body className="min-h-screen bg-surface text-on-surface font-body antialiased">
         <StoreProvider>{children}</StoreProvider>
       </body>

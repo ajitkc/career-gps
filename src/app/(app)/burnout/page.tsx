@@ -6,6 +6,7 @@ import {
   TrendingDown, Moon, Briefcase, GraduationCap, Brain,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { GlowCard } from "@/components/ui/spotlight-card";
 
 function Gauge({ score, size = 160 }: { score: number; size?: number }) {
   const radius = (size - 20) / 2;
@@ -126,16 +127,17 @@ export default function BurnoutPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-surface-container-high rounded-2xl p-8 border border-outline-variant/10 flex flex-col items-center"
         >
-          <Gauge score={burnoutScore.score} />
-          <div className={`font-headline text-2xl font-extrabold capitalize mt-2 ${levelColor}`}>
-            {burnoutScore.level} Risk
-          </div>
-          <div className="flex items-center gap-2 mt-2 text-on-surface-variant text-sm">
-            <Clock className="w-4 h-4" />
-            {burnoutScore.riskWindow}
-          </div>
+          <GlowCard className="flex flex-col items-center py-8">
+            <Gauge score={burnoutScore.score} />
+            <div className={`font-headline text-2xl font-extrabold capitalize mt-2 ${levelColor}`}>
+              {burnoutScore.level} Risk
+            </div>
+            <div className="flex items-center gap-2 mt-2 text-on-surface-variant text-sm">
+              <Clock className="w-4 h-4" />
+              {burnoutScore.riskWindow}
+            </div>
+          </GlowCard>
         </motion.div>
 
         {/* Traffic */}
@@ -143,19 +145,20 @@ export default function BurnoutPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="bg-surface-container-high rounded-2xl p-8 border border-outline-variant/10 space-y-4"
         >
-          <div className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
-            Traffic Level
-          </div>
-          <TrafficRoad level={burnoutScore.level} />
-          <p className="text-xs text-on-surface-variant leading-relaxed italic">
-            {burnoutScore.level === "low"
-              ? "Smooth sailing. Your current pace looks sustainable."
-              : burnoutScore.level === "medium"
-              ? "Traffic is building. Minor adjustments now prevent a full stop later."
-              : "Red zone. Your roadmap needs a recovery detour immediately."}
-          </p>
+          <GlowCard className="space-y-4 py-8">
+            <div className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
+              Traffic Level
+            </div>
+            <TrafficRoad level={burnoutScore.level} />
+            <p className="text-xs text-on-surface-variant leading-relaxed italic">
+              {burnoutScore.level === "low"
+                ? "Smooth sailing. Your current pace looks sustainable."
+                : burnoutScore.level === "medium"
+                ? "Traffic is building. Minor adjustments now prevent a full stop later."
+                : "Red zone. Your roadmap needs a recovery detour immediately."}
+            </p>
+          </GlowCard>
         </motion.div>
       </div>
 
@@ -169,28 +172,28 @@ export default function BurnoutPage() {
           Your Stats
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 text-center">
+          <GlowCard className="text-center">
             <Briefcase className="w-5 h-5 text-primary mx-auto mb-2" />
             <div className="font-headline text-2xl font-extrabold">{profile.weeklyWorkHours}h</div>
             <div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">
               Work / Week
             </div>
-          </div>
-          <div className="bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 text-center">
+          </GlowCard>
+          <GlowCard className="text-center">
             <GraduationCap className="w-5 h-5 text-secondary mx-auto mb-2" />
             <div className="font-headline text-2xl font-extrabold">{profile.weeklyStudyHours}h</div>
             <div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">
               Study / Week
             </div>
-          </div>
-          <div className="bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 text-center">
+          </GlowCard>
+          <GlowCard className="text-center">
             <Moon className="w-5 h-5 text-tertiary mx-auto mb-2" />
             <div className="font-headline text-2xl font-extrabold capitalize">{profile.sleepQuality}</div>
             <div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">
               Sleep Quality
             </div>
-          </div>
-          <div className="bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 text-center">
+          </GlowCard>
+          <GlowCard className="text-center">
             <Brain className="w-5 h-5 text-primary mx-auto mb-2" />
             <div className="font-headline text-2xl font-extrabold capitalize">
               {profile.emotionalState.replace("_", " ")}
@@ -198,7 +201,7 @@ export default function BurnoutPage() {
             <div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">
               Mood
             </div>
-          </div>
+          </GlowCard>
         </div>
       </motion.div>
 
@@ -207,41 +210,42 @@ export default function BurnoutPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.25 }}
-        className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10"
       >
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-4 h-4 text-tertiary" />
-          <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
-            Contributing Factors
-          </span>
-        </div>
-        <div className="space-y-3">
-          {burnoutScore.factors.map((factor, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div
-                className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  factor.impact === "high"
-                    ? "bg-tertiary-container"
-                    : factor.impact === "medium"
-                    ? "bg-secondary"
-                    : "bg-primary"
-                }`}
-              />
-              <span className="text-sm text-on-surface-variant flex-1">{factor.label}</span>
-              <span
-                className={`text-[10px] font-bold uppercase ${
-                  factor.impact === "high"
-                    ? "text-tertiary"
-                    : factor.impact === "medium"
-                    ? "text-secondary"
-                    : "text-primary"
-                }`}
-              >
-                {factor.impact}
-              </span>
-            </div>
-          ))}
-        </div>
+        <GlowCard>
+          <div className="flex items-center gap-2 mb-4">
+            <AlertTriangle className="w-4 h-4 text-tertiary" />
+            <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
+              Contributing Factors
+            </span>
+          </div>
+          <div className="space-y-3">
+            {burnoutScore.factors.map((factor, i) => (
+              <div key={i} className="flex items-center gap-3">
+                <div
+                  className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                    factor.impact === "high"
+                      ? "bg-tertiary-container"
+                      : factor.impact === "medium"
+                      ? "bg-secondary"
+                      : "bg-primary"
+                  }`}
+                />
+                <span className="text-sm text-on-surface-variant flex-1">{factor.label}</span>
+                <span
+                  className={`text-[10px] font-bold uppercase ${
+                    factor.impact === "high"
+                      ? "text-tertiary"
+                      : factor.impact === "medium"
+                      ? "text-secondary"
+                      : "text-primary"
+                  }`}
+                >
+                  {factor.impact}
+                </span>
+              </div>
+            ))}
+          </div>
+        </GlowCard>
       </motion.div>
 
       {/* AI Analysis */}
@@ -251,22 +255,23 @@ export default function BurnoutPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingDown className="w-4 h-4 text-tertiary" />
-            <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
-              What We Noticed
-            </span>
-          </div>
-          <ul className="space-y-3">
-            {burnout.reasons.map((reason, i) => (
-              <li key={i} className="text-sm text-on-surface-variant leading-relaxed flex gap-2">
-                <span className="text-tertiary mt-0.5">-</span>
-                {reason}
-              </li>
-            ))}
-          </ul>
+          <GlowCard>
+            <div className="flex items-center gap-2 mb-4">
+              <TrendingDown className="w-4 h-4 text-tertiary" />
+              <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
+                What We Noticed
+              </span>
+            </div>
+            <ul className="space-y-3">
+              {burnout.reasons.map((reason, i) => (
+                <li key={i} className="text-sm text-on-surface-variant leading-relaxed flex gap-2">
+                  <span className="text-tertiary mt-0.5">-</span>
+                  {reason}
+                </li>
+              ))}
+            </ul>
+          </GlowCard>
         </motion.div>
 
         {/* Recommendations */}
@@ -274,22 +279,23 @@ export default function BurnoutPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.35 }}
-          className="bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10"
         >
-          <div className="flex items-center gap-2 mb-4">
-            <Shield className="w-4 h-4 text-primary" />
-            <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
-              What To Do About It
-            </span>
-          </div>
-          <div className="space-y-2">
-            {burnout.recommendations.map((rec, i) => (
-              <div key={i} className="flex items-start gap-3 p-3 bg-surface-container rounded-xl">
-                <Heart className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                <span className="text-sm text-on-surface-variant">{rec}</span>
-              </div>
-            ))}
-          </div>
+          <GlowCard>
+            <div className="flex items-center gap-2 mb-4">
+              <Shield className="w-4 h-4 text-primary" />
+              <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">
+                What To Do About It
+              </span>
+            </div>
+            <div className="space-y-2">
+              {burnout.recommendations.map((rec, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 bg-surface-container/50 rounded-xl">
+                  <Heart className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                  <span className="text-sm text-on-surface-variant">{rec}</span>
+                </div>
+              ))}
+            </div>
+          </GlowCard>
         </motion.div>
       </div>
     </div>

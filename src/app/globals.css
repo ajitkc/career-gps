@@ -65,9 +65,10 @@
   --color-inverse-on-surface: #313032;
 
   /* Fonts */
-  --font-headline: "Manrope", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
-  --font-label: "Inter", system-ui, sans-serif;
+  --font-headline: var(--font-sans), "Instrument Sans", system-ui, sans-serif;
+  --font-body: var(--font-sans), "Instrument Sans", system-ui, sans-serif;
+  --font-label: var(--font-sans), "Instrument Sans", system-ui, sans-serif;
+  --font-serif: var(--font-serif), "Instrument Serif", Georgia, serif;
 }
 
 /* ========================================
@@ -189,3 +190,86 @@ body {
 .animate-spin-slow {
   animation: spin-slow 3s linear infinite;
 }
+
+/* ========================================
+   Staggered Entrance Animations (21st.dev style)
+   ======================================== */
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in-up-slow {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s ease-out both;
+}
+
+.animate-fade-in-up-slow {
+  animation: fade-in-up-slow 1s ease-out both;
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-500 { animation-delay: 500ms; }
+
+/* ========================================
+   Animated Mesh Gradient Blobs
+   ======================================== */
+
+@keyframes blob-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(80px, 40px) scale(1.1); }
+  50% { transform: translate(20px, 80px) scale(0.95); }
+  75% { transform: translate(-40px, 20px) scale(1.05); }
+}
+
+@keyframes blob-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-60px, 50px) scale(1.08); }
+  50% { transform: translate(-30px, -40px) scale(0.92); }
+  75% { transform: translate(50px, 30px) scale(1.04); }
+}
+
+@keyframes blob-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(40px, -60px) scale(1.06); }
+  50% { transform: translate(-50px, 30px) scale(0.97); }
+  75% { transform: translate(30px, 50px) scale(1.1); }
+}
+
+@keyframes blob-4 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(-30px, -40px) scale(1.05); }
+  50% { transform: translate(60px, 20px) scale(0.93); }
+  75% { transform: translate(-20px, 60px) scale(1.08); }
+}
+
+/* Badge shine sweep — translateX-based for smooth animation */
+@keyframes badge-shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+.animate-badge-shine {
+  background: linear-gradient(90deg, transparent, rgba(184,195,255,0.1), transparent);
+  animation: badge-shine 3s ease-in-out infinite;
+}
+
+/* Star Button animation */
+@keyframes star-btn {
+  0% { offset-distance: 0%; }
+  100% { offset-distance: 100%; }
+}
+.animate-star-btn {
+  animation: star-btn calc(var(--duration) * 1s) linear infinite;
+}
+
+.animate-blob-1 { animation: blob-1 12s ease-in-out infinite; }
+.animate-blob-2 { animation: blob-2 15s ease-in-out infinite; }
+.animate-blob-3 { animation: blob-3 18s ease-in-out infinite; }
+.animate-blob-4 { animation: blob-4 14s ease-in-out infinite; }
