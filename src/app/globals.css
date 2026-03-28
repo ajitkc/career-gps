@@ -1,26 +1,191 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* ========================================
+   Career GPS — Design System: The Luminous Navigator
+   ======================================== */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Surface Hierarchy */
+  --color-surface: #131315;
+  --color-surface-dim: #131315;
+  --color-surface-bright: #39393b;
+  --color-surface-container-lowest: #0e0e10;
+  --color-surface-container-low: #1b1b1d;
+  --color-surface-container: #201f21;
+  --color-surface-container-high: #2a2a2c;
+  --color-surface-container-highest: #353437;
+  --color-surface-variant: #353437;
+
+  /* Primary */
+  --color-primary: #b8c3ff;
+  --color-primary-container: #2e5bff;
+  --color-primary-fixed: #dde1ff;
+  --color-primary-fixed-dim: #b8c3ff;
+  --color-on-primary: #002388;
+  --color-on-primary-container: #efefff;
+  --color-on-primary-fixed: #001356;
+  --color-on-primary-fixed-variant: #0035be;
+  --color-inverse-primary: #124af0;
+  --color-surface-tint: #b8c3ff;
+
+  /* Secondary */
+  --color-secondary: #d8b9ff;
+  --color-secondary-container: #6e06d0;
+  --color-secondary-fixed: #eddcff;
+  --color-secondary-fixed-dim: #d8b9ff;
+  --color-on-secondary: #450086;
+  --color-on-secondary-container: #d5b5ff;
+  --color-on-secondary-fixed: #290055;
+  --color-on-secondary-fixed-variant: #6200bc;
+
+  /* Tertiary */
+  --color-tertiary: #ffb3ae;
+  --color-tertiary-container: #d02a30;
+  --color-tertiary-fixed: #ffdad7;
+  --color-tertiary-fixed-dim: #ffb3ae;
+  --color-on-tertiary: #68000b;
+  --color-on-tertiary-container: #ffecea;
+  --color-on-tertiary-fixed: #410004;
+  --color-on-tertiary-fixed-variant: #930014;
+
+  /* Error */
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+
+  /* Neutrals */
+  --color-background: #131315;
+  --color-on-background: #e5e1e4;
+  --color-on-surface: #e5e1e4;
+  --color-on-surface-variant: #c4c5d9;
+  --color-outline: #8e90a2;
+  --color-outline-variant: #434656;
+  --color-inverse-surface: #e5e1e4;
+  --color-inverse-on-surface: #313032;
+
+  /* Fonts */
+  --font-headline: "Manrope", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-label: "Inter", system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ========================================
+   Base Styles
+   ======================================== */
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-surface);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+}
+
+::selection {
+  background: rgb(184 195 255 / 0.3);
+}
+
+/* ========================================
+   Glass Panel Utility
+   ======================================== */
+
+.glass-panel {
+  background: rgb(53 52 55 / 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ========================================
+   Neon Glow Effects
+   ======================================== */
+
+.neon-glow-primary {
+  box-shadow: 0 0 20px rgb(46 91 255 / 0.3);
+}
+
+.neon-glow-secondary {
+  box-shadow: 0 0 20px rgb(216 185 255 / 0.3);
+}
+
+.neon-glow-tertiary {
+  box-shadow: 0 0 25px rgb(208 42 48 / 0.4);
+}
+
+/* ========================================
+   Road Perspective
+   ======================================== */
+
+.road-perspective {
+  perspective: 1200px;
+}
+
+.road-surface {
+  transform: rotateX(60deg);
+  transform-origin: bottom;
+}
+
+/* ========================================
+   Custom Scrollbar (subtle, dark)
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(67 70 86 / 0.4);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(67 70 86 / 0.7);
+}
+
+/* ========================================
+   Burnout Pulse Animation
+   ======================================== */
+
+@keyframes burnout-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgb(208 42 48 / 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgb(208 42 48 / 0.7);
+  }
+}
+
+.burnout-pulse {
+  animation: burnout-pulse 2s ease-in-out infinite;
+}
+
+/* ========================================
+   Radial Glow Background
+   ======================================== */
+
+.bg-radial-glow {
+  background: radial-gradient(
+    800px circle at 50% 40%,
+    rgb(46 91 255 / 0.06),
+    transparent 80%
+  );
+}
+
+/* ========================================
+   Slow Spin for Loading States
+   ======================================== */
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
 }
