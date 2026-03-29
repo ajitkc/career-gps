@@ -60,7 +60,10 @@ export default function Navbar() {
               {link.label}
             </a>
           ))}
-          <div className="ml-1">
+          <div className="ml-1 flex items-center gap-2">
+            <AnimatedButton href="/login" variant="outline" size="sm">
+              Log In
+            </AnimatedButton>
             <AnimatedButton href="/onboarding" size="sm">
               Get Started
             </AnimatedButton>
@@ -108,8 +111,8 @@ export default function Navbar() {
             ))}
           </div>
           <div className="flex flex-col gap-2 pb-8">
-            <AnimatedButton href="/onboarding" variant="outline">
-              Sign In
+            <AnimatedButton href="/login" variant="outline">
+              Log In
             </AnimatedButton>
             <AnimatedButton href="/onboarding">
               Get Started

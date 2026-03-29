@@ -15,7 +15,7 @@ const NAV_ITEMS = [
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { profile, reset } = useStore();
+  const { profile, reset, avatarUrl } = useStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -66,9 +66,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setDropdownOpen((o) => !o)}
               className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-surface-container transition-colors"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center">
-                <User className="w-3.5 h-3.5 text-on-primary" />
-              </div>
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-container flex items-center justify-center text-sm font-bold text-on-primary uppercase">
+                  {profile?.name?.charAt(0) || "?"}
+                </div>
+              )}
               <span className="text-sm font-medium text-on-surface hidden sm:block">
                 Hi, {profile?.name || "there"}
               </span>
@@ -95,7 +99,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
                   onClick={() => {
                     setDropdownOpen(false);
                     reset();
-                    window.location.href = "/onboarding";
+                    window.location.href = "/";
                   }}
                   className="w-full flex items-center gap-3 px-4 py-3 text-sm text-error hover:bg-surface-container transition-colors text-left"
                 >

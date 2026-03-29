@@ -28,9 +28,15 @@ export type CareerStage =
   | "senior"
   | "lead";
 
+export type EducationLevel = "high_school" | "bachelors" | "masters" | "other";
+export type DegreeField = "computer_science" | "it" | "engineering" | "science" | "management" | "commerce" | "arts" | "biology" | "other";
+
 export interface UserProfile {
   name: string;
+  email: string;
   education: string;
+  educationLevel: EducationLevel;
+  degreeField: DegreeField;
   currentStatus: CurrentStatus;
   skills: string[];
   interests: string[];
@@ -142,4 +148,6 @@ export interface AppState {
   careerCheckpoint: string | null;
   /** Supabase profile row ID for persisting check-ins */
   profileId: string | null;
+  /** Base64 data URL for profile picture */
+  avatarUrl: string | null;
 }

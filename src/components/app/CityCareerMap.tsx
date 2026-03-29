@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, ZoomIn, ZoomOut } from "lucide-react";
+import { X, ChevronUp, ChevronDown, ChevronLeft, ChevronRight, CheckCircle2, ZoomIn, ZoomOut, Circle, Clock, Zap, MapPin, TrendingUp } from "lucide-react";
 import type { CareerMatch } from "@/types";
 import { useStore } from "@/lib/store";
 
@@ -23,10 +23,10 @@ interface BezierPts { p0: [number, number]; p1: [number, number]; p2: [number, n
 // LAYOUT
 // ============================================================
 
-const LW = 480;
-const LH = 400;
-const RW = 35;  // 20% reduced from 44
-const NR = 28;
+const LW = 520;
+const LH = 440;
+const RW = 38;
+const NR = 38;
 
 function buildMap(careers: CareerMatch[]) {
   const nodes = new Map<string, MNode>();
@@ -133,7 +133,7 @@ function bfsDist(adj: Map<string, Set<string>>, s: string) {
 
 interface PanelData { node: MNode; career: CareerMatch }
 
-export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
+export default function CityCareerMap({ careers, externalCareerIdx, externalTs }: { careers: CareerMatch[]; externalCareerIdx?: number | null; externalTs?: number }) {
   const store = useStore();
   const containerRef = useRef<HTMLDivElement>(null);
   const { nodes, edges, adj } = useMemo(() => buildMap(careers), [careers]);
@@ -151,12 +151,35 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   const [selectedPath, setSelectedPath] = useState<string[] | null>(null);
   const [panelData, setPanelData] = useState<PanelData | null>(null);
 
+  // Reset car position when careers/map changes (e.g. chatbot updates career tracks)
+  useEffect(() => {
+    const validCheckpoint = store.careerCheckpoint && nodes.has(store.careerCheckpoint) ? store.careerCheckpoint : "c0-s1";
+    const fallback = nodes.has(validCheckpoint) ? validCheckpoint : (nodes.keys().next().value || "root");
+    const nd = nodes.get(fallback);
+    if (nd) {
+      setCarNodeId(fallback);
+      setCarPos({ x: nd.x, y: nd.y });
+    }
+    setPanelData(null);
+    setSelectedPath(null);
+  }, [careers, nodes, store.careerCheckpoint]);
+
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [dragging, setDragging] = useState(false);
   const dragRef = useRef({ sx: 0, sy: 0, px: 0, py: 0 });
 
   const distances = useMemo(() => bfsDist(adj, carNodeId), [adj, carNodeId]);
+
+  // External career selection (from dashboard cards) — ts ensures re-trigger on same card
+  useEffect(() => {
+    if (externalCareerIdx != null && externalCareerIdx >= 0 && externalCareerIdx < careers.length) {
+      const career = careers[externalCareerIdx];
+      const nodeId = `c${externalCareerIdx}-s0`;
+      const node = nodes.get(nodeId);
+      if (node) setPanelData({ node, career });
+    }
+  }, [externalCareerIdx, externalTs, careers, nodes]);
 
   // Pre-compute bezier points for all edges (both directions)
   const edgeBeziers = useMemo(() => {
@@ -277,7 +300,27 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   const advanceCheckpoint = useCallback(() => {
     store.setCareerCheckpoint(carNodeId);
     setSelectedPath(null);
-  }, [carNodeId, store]);
+
+    // Update the user's profile and analysis to reflect the new career stage
+    const node = nodes.get(carNodeId);
+    if (node && node.careerIdx >= 0 && store.analysis) {
+      const career = careers[node.careerIdx];
+      const stageMap: Record<number, string> = { 0: "intern", 1: "junior", 2: "mid", 3: "senior", 4: "lead" };
+      const newStage = stageMap[node.stageIdx] || "exploring";
+      const currentStageLabel = `${career.title} — ${node.label}`;
+
+      // Update profile career stage
+      if (store.profile) {
+        store.setProfile({ ...store.profile, careerStage: newStage as import("@/types").CareerStage });
+      }
+
+      // Update roadmap current_stage
+      store.setAnalysis({
+        ...store.analysis,
+        roadmap: { ...store.analysis.roadmap, current_stage: currentStageLabel },
+      });
+    }
+  }, [carNodeId, store, nodes, careers]);
 
   // Keyboard — all four directions
   const findNeighbor = useCallback((dir: "up" | "down" | "left" | "right") => {
@@ -301,10 +344,10 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
     const h = (e: KeyboardEvent) => {
       if (isMoving) return;
       let d: "up" | "down" | "left" | "right" | null = null;
-      if (e.key === "ArrowUp" || e.key === "w") d = "up";
-      else if (e.key === "ArrowDown" || e.key === "s") d = "down";
-      else if (e.key === "ArrowLeft" || e.key === "a") d = "left";
-      else if (e.key === "ArrowRight" || e.key === "d") d = "right";
+      if (e.key === "ArrowUp") d = "up";
+      else if (e.key === "ArrowDown") d = "down";
+      else if (e.key === "ArrowLeft") d = "left";
+      else if (e.key === "ArrowRight") d = "right";
       if (d) { e.preventDefault(); const t = findNeighbor(d); if (t) navigateTo(t); }
     };
     window.addEventListener("keydown", h);
@@ -327,7 +370,12 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const h = (e: WheelEvent) => { e.preventDefault(); setZoom((z) => Math.max(0.3, Math.min(2.5, z + (e.deltaY > 0 ? -0.08 : 0.08)))); };
+    const h = (e: WheelEvent) => {
+      // Don't zoom if scrolling inside the drawer panel
+      if ((e.target as HTMLElement).closest("[data-panel]")) return;
+      e.preventDefault();
+      setZoom((z) => Math.max(0.3, Math.min(2.5, z + (e.deltaY > 0 ? -0.08 : 0.08))));
+    };
     el.addEventListener("wheel", h, { passive: false });
     return () => el.removeEventListener("wheel", h);
   }, []);
@@ -378,23 +426,45 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
             const d = bezierPath(bp);
             const burnout = fn.burnout || tn.burnout;
             return (
-              <g key={`${edge.from}-${edge.to}`} opacity={vis === "dim" ? 0.15 : 1}>
+              <g key={`${edge.from}-${edge.to}`} opacity={vis === "dim" ? 0.2 : 1}>
+                {/* Outer glow for active paths */}
+                {vis === "active" && (
+                  <path d={d} fill="none"
+                    stroke={burnout ? "rgba(239,68,68,0.15)" : "rgba(59,130,246,0.15)"}
+                    strokeWidth={RW + 20} strokeLinecap="round" />
+                )}
                 {/* Road border */}
-                <path d={d} fill="none" stroke="#1a1d24" strokeWidth={RW + 4} strokeLinecap="round" />
+                <path d={d} fill="none" stroke={vis === "active" ? "#1e293b" : "#1e2028"} strokeWidth={RW + 6} strokeLinecap="round" />
                 {/* Road surface */}
                 <path d={d} fill="none"
-                  stroke={vis === "active" ? (burnout ? "#1c1517" : "#131a2a") : "#16181e"}
+                  stroke={vis === "active" ? (burnout ? "#2a1520" : "#172042") : vis === "child" ? "#1a1e2e" : "#191c24"}
                   strokeWidth={RW} strokeLinecap="round" />
+                {/* Lane edge lines */}
+                {vis !== "dim" && (() => {
+                  const dx = tn.x - fn.x, dy = tn.y - fn.y, len = Math.hypot(dx, dy);
+                  if (len < 1) return null;
+                  const nx = (-dy / len) * (RW / 2 - 2), ny = (dx / len) * (RW / 2 - 2);
+                  return [-1, 1].map((s) => (
+                    <line key={s} x1={fn.x + nx * s} y1={fn.y + ny * s} x2={tn.x + nx * s} y2={tn.y + ny * s}
+                      stroke={vis === "active" ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.05)"} strokeWidth={1} />
+                  ));
+                })()}
+                {/* Center dashed line */}
+                <path d={d} fill="none"
+                  stroke={vis === "active" ? "rgba(255,255,255,0.4)" : vis === "child" ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.06)"}
+                  strokeWidth={1.5} strokeDasharray="8 12" strokeLinecap="round" />
                 {/* Active glow center line */}
                 {vis === "active" && (
                   <path d={d} fill="none"
                     stroke={burnout ? "#ef4444" : "#3b82f6"}
-                    strokeWidth={4} strokeLinecap="round" opacity={0.6} />
+                    strokeWidth={6} strokeLinecap="round" opacity={0.5} />
                 )}
-                {/* Center dashed line */}
-                <path d={d} fill="none"
-                  stroke={vis === "active" ? "rgba(255,255,255,0.35)" : vis === "child" ? "rgba(255,255,255,0.1)" : "rgba(255,255,255,0.04)"}
-                  strokeWidth={1} strokeDasharray="5 8" strokeLinecap="round" />
+                {/* Active path direction dots */}
+                {vis === "active" && (
+                  <path d={d} fill="none"
+                    stroke={burnout ? "#fca5a5" : "#93c5fd"}
+                    strokeWidth={3} strokeLinecap="round" strokeDasharray="2 20" opacity={0.6} />
+                )}
               </g>
             );
           })}
@@ -469,53 +539,55 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
 
                 {/* Stage number */}
                 {!isCkpt && !isCar && !isDim && !isRoot && !isSelected && (
-                  <text x={node.x} y={node.y + 4} textAnchor="middle" fill={isChild ? "#94a3b8" : "#475569"} fontSize={9} fontWeight={700}>{node.stageIdx + 1}</text>
+                  <text x={node.x} y={node.y + 6} textAnchor="middle" fill="#f1f5f9" fontSize={16} fontWeight={700}>{node.stageIdx + 1}</text>
                 )}
 
                 {/* Selected checkmark */}
                 {isSelected && !isCkpt && !isCar && (
-                  <circle cx={node.x} cy={node.y} r={6} fill="white" />
+                  <circle cx={node.x} cy={node.y} r={8} fill="white" />
                 )}
 
                 {/* Root dot */}
-                {isRoot && <text x={node.x} y={node.y + 4} textAnchor="middle" fill="#64748b" fontSize={10} fontWeight={700}>●</text>}
+                {isRoot && <text x={node.x} y={node.y + 5} textAnchor="middle" fill="#94a3b8" fontSize={14} fontWeight={700}>●</text>}
 
                 {/* Burnout indicator */}
                 {node.burnout && !isDim && (
                   <g transform={`translate(${node.x + NR * 0.7}, ${node.y - NR * 0.7})`}>
-                    <circle r={6} fill="#ef4444" /><text x={0} y={3} textAnchor="middle" fill="white" fontSize={7} fontWeight={800}>!</text>
+                    <circle r={8} fill="#ef4444" /><text x={0} y={4} textAnchor="middle" fill="white" fontSize={9} fontWeight={800}>!</text>
                   </g>
                 )}
 
-                {/* Label */}
+                {/* Label pill */}
                 {!isDim && (
                   <g>
-                    <rect x={node.x - 58} y={node.y + NR + 5} width={116} height={18} rx={9}
-                      fill={isSelected ? "rgba(37,99,235,0.2)" : isCkpt ? "rgba(59,130,246,0.15)" : "rgba(15,17,23,0.9)"}
-                      stroke={isSelected ? "rgba(96,165,250,0.3)" : isCkpt ? "rgba(59,130,246,0.25)" : "rgba(255,255,255,0.05)"} strokeWidth={0.5} />
-                    <text x={node.x} y={node.y + NR + 17} textAnchor="middle"
-                      fill={isSelected ? "#93c5fd" : isCkpt ? "#93c5fd" : isChild ? "#cbd5e1" : "#64748b"}
-                      fontSize={8} fontWeight={isSelected || isCkpt || isChild ? 700 : 500}>
-                      {node.label.length > 20 ? node.label.slice(0, 18) + "\u2026" : node.label}
+                    <rect x={node.x - 90} y={node.y + NR + 6} width={180} height={30} rx={15}
+                      fill={isSelected ? "rgba(37,99,235,0.3)" : isCkpt ? "rgba(59,130,246,0.25)" : "rgba(15,17,23,0.94)"}
+                      stroke={isSelected ? "rgba(96,165,250,0.5)" : isCkpt ? "rgba(59,130,246,0.35)" : "rgba(255,255,255,0.12)"} strokeWidth={0.6} />
+                    <text x={node.x} y={node.y + NR + 26} textAnchor="middle"
+                      fill={isSelected ? "#bfdbfe" : isCkpt ? "#bfdbfe" : isChild ? "#f8fafc" : "#e2e8f0"}
+                      fontSize={14} fontWeight={700}>
+                      {node.label.length > 14 ? node.label.slice(0, 12) + "\u2026" : node.label}
                     </text>
                   </g>
                 )}
 
                 {/* YOU badge */}
                 {isCkpt && !isRoot && (
-                  <g transform={`translate(${node.x}, ${node.y - NR - 12})`}>
-                    <rect x={-20} y={-7} width={40} height={14} rx={7} fill="#3b82f6" />
-                    <text x={0} y={3} textAnchor="middle" fill="white" fontSize={7} fontWeight={800}>YOU</text>
+                  <g transform={`translate(${node.x}, ${node.y - NR - 18})`}>
+                    <rect x={-26} y={-10} width={52} height={20} rx={10} fill="#3b82f6" />
+                    <text x={0} y={4} textAnchor="middle" fill="white" fontSize={12} fontWeight={800}>YOU</text>
                   </g>
                 )}
 
                 {/* Career title above first stage */}
                 {node.stageIdx === 0 && !isRoot && !isDim && (
-                  <text x={node.x} y={node.y - NR - 22} textAnchor="middle"
-                    fill={node.burnout ? "#f87171" : "#818cf8"} fontSize={7} fontWeight={800} letterSpacing="0.1em" opacity={0.6}>
+                  <text x={node.x} y={node.y - NR - 28} textAnchor="middle"
+                    fill={node.burnout ? "#fca5a5" : "#c7d2fe"} fontSize={14} fontWeight={800} letterSpacing="0.04em">
                     {careers[node.careerIdx]?.title.toUpperCase()}
                   </text>
                 )}
+
+                {/* tooltip rendered as HTML overlay below */}
               </g>
             );
           })}
@@ -552,6 +624,39 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
           </g>
         </g>
       </svg>
+
+      {/* HTML Tooltip — rendered outside SVG so zoom doesn't affect size */}
+      {hoveredNode && !nodes.get(hoveredNode)?.id.startsWith("root") && (() => {
+        const node = nodes.get(hoveredNode);
+        if (!node || node.careerIdx < 0) return null;
+        const career = careers[node.careerIdx];
+        if (!career) return null;
+        // Convert node world coords to screen coords
+        // SVG viewBox: (0,0)-(vw,vh) maps to container (cw,ch)
+        // Inner transform: translate(vw/2, vh*0.55) scale(zoom) translate(-carPos+pan*panScale)
+        const svgScale = Math.min(cw / vw, ch / vh);
+        const worldX = (vw / 2) + (node.x - carPos.x + pan.x * panScale) * zoom;
+        const worldY = (vh * 0.55) + (node.y - carPos.y + pan.y * panScale) * zoom;
+        const screenX = (worldX - (vw - cw / svgScale) / 2) * svgScale;
+        const screenY = (worldY - (vh - ch / svgScale) / 2) * svgScale;
+        return (
+          <div className="absolute z-30 pointer-events-none" style={{ left: screenX, top: screenY - 20, transform: "translate(-50%, -100%)" }}>
+            <div className="bg-[#0a0c12]/97 border border-white/15 rounded-2xl px-5 py-4 shadow-[0_12px_48px_rgba(0,0,0,0.6)] backdrop-blur-xl min-w-[280px] max-w-[340px]">
+              <div className="text-lg font-extrabold text-white leading-tight">{node.label}</div>
+              <div className="text-sm font-semibold text-blue-400 mt-1">{career.title}</div>
+              <div className="flex items-center gap-2 mt-2 text-sm text-slate-300">
+                <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-bold">Stage {node.stageIdx + 1}/{career.progression.length}</span>
+                <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-bold">{career.difficulty}</span>
+                <span className="bg-white/10 px-2 py-0.5 rounded-md text-xs font-bold">{career.stress_level} stress</span>
+              </div>
+              {career.fit_reason && (
+                <div className="text-xs text-slate-400 mt-2 leading-relaxed line-clamp-2">{career.fit_reason}</div>
+              )}
+            </div>
+            <div className="w-3 h-3 bg-[#0a0c12] border-r border-b border-white/15 rotate-45 mx-auto -mt-1.5" />
+          </div>
+        );
+      })()}
 
       {/* D-PAD — 4 directions */}
       <div className="absolute bottom-6 left-6 z-10">
@@ -598,64 +703,227 @@ export default function CityCareerMap({ careers }: { careers: CareerMatch[] }) {
       </div>
 
       {/* HINT */}
-      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 bg-[#1a1d24]/80 backdrop-blur border border-[#2a2d35] rounded-full px-4 py-1.5 shadow-lg">
-        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-10 bg-[#1a1d24]/80 backdrop-blur border border-[#2a2d35] rounded-full px-5 py-2 shadow-lg">
+        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
           <span className="text-blue-400">Click</span> any node · <span className="text-blue-400">↑↓←→</span> navigate · <span className="text-blue-400">Scroll</span> zoom
         </span>
       </div>
 
-      {/* PANEL */}
+      {/* PANEL — rich expandable drawer */}
       <AnimatePresence>
         {panelData && (
-          <motion.div initial={{ x: "100%", opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: "100%", opacity: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="absolute top-0 right-0 bottom-0 w-full md:w-[360px] z-20 bg-[#12141a]/95 backdrop-blur-xl border-l border-[#2a2d35] shadow-2xl overflow-y-auto">
-            <div className="sticky top-0 z-10 bg-[#12141a]/80 backdrop-blur border-b border-[#2a2d35] px-5 py-4 flex items-center justify-between">
-              <div>
-                <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">{panelData.node.burnout ? "\u26A0 High Stress" : "Career Stage"}</div>
-                <h3 className="text-lg font-extrabold text-white tracking-tight">{panelData.node.label}</h3>
-                <p className="text-xs text-slate-500">{panelData.career.title}</p>
-              </div>
-              <button onClick={() => { setPanelData(null); setSelectedPath(null); }} data-clickable className="w-8 h-8 rounded-lg hover:bg-[#1e2028] flex items-center justify-center"><X className="w-4 h-4 text-slate-500" /></button>
-            </div>
-            <div className="px-5 py-5 space-y-4">
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { l: "Difficulty", v: panelData.career.difficulty, c: panelData.career.difficulty === "Hard" ? "text-red-400" : "text-blue-400" },
-                  { l: "Growth", v: panelData.career.growth, c: "text-violet-400" },
-                  { l: "Stress", v: panelData.career.stress_level, c: panelData.career.stress_level === "High" ? "text-red-400" : "text-blue-400" },
-                ].map((m) => (
-                  <div key={m.l} className="bg-[#1a1d24] rounded-lg p-2.5 text-center border border-[#2a2d35]">
-                    <div className="text-[8px] text-slate-600 uppercase tracking-widest">{m.l}</div>
-                    <div className={`font-bold text-sm ${m.c}`}>{m.v}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="bg-blue-500/10 rounded-lg p-3 border border-blue-500/20">
-                <div className="text-[9px] text-blue-400 uppercase tracking-widest font-black mb-1.5">Timeline</div>
-                <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div><div className="text-[8px] text-slate-600">First</div><div className="font-bold text-slate-300">{panelData.career.estimated_timeline.to_first_role}</div></div>
-                  <div><div className="text-[8px] text-slate-600">Mid</div><div className="font-bold text-slate-300">{panelData.career.estimated_timeline.to_mid_level}</div></div>
-                  <div><div className="text-[8px] text-slate-600">Senior</div><div className="font-bold text-slate-300">{panelData.career.estimated_timeline.to_senior}</div></div>
-                </div>
-              </div>
-              <p className="text-sm text-slate-400 leading-relaxed">{panelData.career.fit_reason}</p>
-              <div>
-                <div className="text-[9px] text-slate-600 uppercase tracking-widest font-black mb-2">Progression</div>
-                {panelData.career.progression.map((role, i) => {
-                  const isHere = i === panelData.node.stageIdx;
-                  return (
-                    <div key={i} className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg mb-1 ${isHere ? "bg-blue-500/10 border border-blue-500/20" : ""}`}>
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${isHere ? "bg-blue-600 text-white" : i < panelData.node.stageIdx ? "bg-blue-900 text-blue-400" : "bg-[#1a1d24] text-slate-600 border border-[#2a2d35]"}`}>{i + 1}</div>
-                      <span className={`text-xs ${isHere ? "text-blue-300 font-bold" : "text-slate-500"}`}>{role}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </motion.div>
+          <PanelDrawer panelData={panelData} analysis={store.analysis} onClose={() => { setPanelData(null); setSelectedPath(null); }} />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ============================================================
+// RICH EXPANDABLE PANEL DRAWER
+// ============================================================
+
+function PanelDrawer({ panelData, analysis, onClose }: { panelData: { node: MNode; career: CareerMatch }; analysis: import("@/types").AnalysisResponse | null; onClose: () => void }) {
+  const store = useStore();
+  const [selecting, setSelecting] = useState(false);
+  const career = panelData.career;
+  const node = panelData.node;
+  const isCurrentPath = analysis?.career_matches[0]?.title === career.title;
+
+  const selectPath = async () => {
+    if (!analysis || !store.profileId) return;
+    setSelecting(true);
+    // Move this career to the top of career_matches
+    const reordered = [career, ...analysis.career_matches.filter((c) => c.title !== career.title)];
+    const updatedAnalysis = {
+      ...analysis,
+      career_matches: reordered,
+      roadmap: { ...analysis.roadmap, current_stage: `${career.title} — ${node.label}` },
+    };
+    store.setAnalysis(updatedAnalysis);
+    store.setCareerCheckpoint(`c0-s${node.stageIdx}`);
+    // Persist to DB
+    try {
+      await fetch("/api/update-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
+      });
+    } catch { /* silent */ }
+    setSelecting(false);
+    onClose();
+  };
+  const roadmap = analysis?.roadmap;
+  const growthPct = career.growth === "High" ? 92 : career.growth === "Medium" ? 68 : 38;
+  const stressSegs = career.stress_level === "High" ? 4 : career.stress_level === "Medium" ? 2 : 1;
+  const durations = ["Day 1-5", "Week 1-2", "Month 1", "Month 3", "Month 6", "Year 1"];
+
+  return (
+    <motion.div initial={{ x: "100%", opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: "100%", opacity: 0 }}
+      transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+      data-panel
+      className="fixed top-0 right-0 bottom-0 z-[60] w-full md:w-[420px] bg-[#12141a]/95 backdrop-blur-xl border-l border-[#2a2d35] shadow-2xl flex flex-col overscroll-contain">
+
+      {/* Header */}
+      <div className="sticky top-0 z-10 bg-[#12141a]/90 backdrop-blur-xl border-b border-[#2a2d35] px-5 py-4 flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-0.5">{node.burnout ? "\u26A0 High Stress" : "Career Stage"}</div>
+          <h3 className="text-lg font-extrabold text-white tracking-tight truncate">{node.label}</h3>
+          <p className="text-xs text-slate-500">{career.title} · Stage {node.stageIdx + 1} of {career.progression.length}</p>
+        </div>
+        <button onClick={onClose} data-clickable className="w-8 h-8 rounded-lg hover:bg-[#1e2028] flex items-center justify-center flex-shrink-0">
+          <X className="w-4 h-4 text-slate-500" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5" onWheel={(e) => e.stopPropagation()}>
+        {/* Stats row */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { l: "Difficulty", v: career.difficulty, c: career.difficulty === "Hard" ? "text-red-400" : "text-blue-400" },
+            { l: "Growth", v: career.growth, c: "text-violet-400" },
+            { l: "Stress", v: career.stress_level, c: career.stress_level === "High" ? "text-red-400" : "text-blue-400" },
+          ].map((m) => (
+            <div key={m.l} className="bg-[#1a1d24] rounded-xl p-3 text-center border border-[#2a2d35]">
+              <div className="text-[9px] text-slate-500 uppercase tracking-widest font-bold">{m.l}</div>
+              <div className={`font-bold text-base ${m.c}`}>{m.v}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Growth bar */}
+        <div>
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-widest font-bold mb-2">
+            <span className="text-slate-500 flex items-center gap-1"><TrendingUp className="w-3 h-3" /> Growth Potential</span>
+            <span className="text-blue-400">{growthPct}%</span>
+          </div>
+          <div className="h-2 bg-[#1a1d24] rounded-full overflow-hidden border border-[#2a2d35]">
+            <motion.div className="h-full bg-blue-500 rounded-full" initial={{ width: 0 }} animate={{ width: `${growthPct}%` }} transition={{ duration: 0.8 }} />
+          </div>
+        </div>
+
+        {/* Stress bar */}
+        <div>
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-widest font-bold mb-2">
+            <span className="text-slate-500">Stress Level</span>
+            <span className="text-slate-400">{career.stress_level}</span>
+          </div>
+          <div className="flex gap-1.5">
+            {[1, 2, 3, 4].map((seg) => (
+              <div key={seg} className={`h-2 flex-1 rounded-full ${seg <= stressSegs ? "bg-blue-500" : "bg-[#1a1d24] border border-[#2a2d35]"}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div className="bg-blue-500/10 rounded-xl p-4 border border-blue-500/20">
+          <div className="text-[10px] text-blue-400 uppercase tracking-widest font-black mb-2 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> Timeline</div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div><div className="text-[9px] text-slate-500 uppercase">First Role</div><div className="font-bold text-sm text-slate-200">{career.estimated_timeline.to_first_role}</div></div>
+            <div><div className="text-[9px] text-slate-500 uppercase">Mid-Level</div><div className="font-bold text-sm text-slate-200">{career.estimated_timeline.to_mid_level}</div></div>
+            <div><div className="text-[9px] text-slate-500 uppercase">Senior</div><div className="font-bold text-sm text-slate-200">{career.estimated_timeline.to_senior}</div></div>
+          </div>
+        </div>
+
+        {/* Fit reason */}
+        <p className="text-sm text-slate-300 leading-relaxed">{career.fit_reason}</p>
+
+        {/* Career Progression — step-by-step roadmap */}
+        <div>
+          <div className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-3 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5" /> Career Progression
+          </div>
+          <div className="space-y-0">
+            {career.progression.map((role, i) => {
+              const isCompleted = i < node.stageIdx;
+              const isCurrent = i === node.stageIdx;
+              const isFuture = i > node.stageIdx;
+              return (
+                <div key={i} className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    {isCompleted ? (
+                      <CheckCircle2 className="w-6 h-6 text-blue-500 flex-shrink-0" />
+                    ) : isCurrent ? (
+                      <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0 shadow-[0_0_10px_rgba(59,130,246,0.5)]">
+                        <div className="w-2.5 h-2.5 rounded-full bg-white" />
+                      </div>
+                    ) : (
+                      <Circle className="w-6 h-6 text-slate-600 flex-shrink-0" />
+                    )}
+                    {i < career.progression.length - 1 && (
+                      <div className={`w-px flex-1 min-h-8 ${isCompleted ? "bg-blue-500/40" : "bg-[#2a2d35]"}`} />
+                    )}
+                  </div>
+                  <div className={`pb-4 ${isFuture ? "opacity-40" : ""}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-bold ${isCurrent ? "text-blue-400" : isCompleted ? "text-slate-300" : "text-slate-500"}`}>{role}</span>
+                      {isCurrent && <span className="text-[8px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full font-bold uppercase">You are here</span>}
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5 text-slate-600">
+                      <Clock className="w-3 h-3" />
+                      <span className="text-[10px]">{durations[i] || `Year ${Math.ceil(i / 2)}`}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Roadmap milestones */}
+        {roadmap && (
+          <div>
+            <div className="text-[10px] text-slate-500 uppercase tracking-widest font-black mb-3 flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" /> Roadmap Milestones
+            </div>
+            {[
+              { label: "Next 30 Days", steps: roadmap.next_30_days },
+              { label: "3 Months", steps: roadmap.next_3_months },
+              { label: "6 Months", steps: roadmap.next_6_months },
+              { label: "12 Months", steps: roadmap.next_12_months },
+            ].map((bucket) => bucket.steps.map((step, si) => (
+              <div key={`${bucket.label}-${si}`} className="mb-4 bg-[#1a1d24] rounded-xl p-4 border border-[#2a2d35]">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[9px] font-bold uppercase tracking-widest bg-blue-500/15 text-blue-400 px-2 py-0.5 rounded-full">{bucket.label}</span>
+                  <span className="text-[10px] text-slate-600">{step.duration}</span>
+                </div>
+                <h4 className="font-bold text-sm text-slate-200">{step.title}</h4>
+                <p className="text-xs text-slate-500 mt-1">{step.description}</p>
+                <div className="mt-2.5 space-y-1.5">
+                  {step.tasks.map((task, ti) => (
+                    <div key={ti} className="flex items-start gap-2">
+                      <Circle className="w-3.5 h-3.5 text-slate-600 flex-shrink-0 mt-0.5" />
+                      <span className="text-xs text-slate-400">{task}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )))}
+          </div>
+        )}
+
+      </div>
+
+      {/* Sticky bottom — Select This Path */}
+      <div className="flex-shrink-0 px-5 py-4 border-t border-[#2a2d35] bg-[#12141a]/95 backdrop-blur-xl">
+        {isCurrentPath ? (
+          <div className="w-full py-2.5 rounded-full text-center text-[11px] font-headline font-bold text-primary bg-primary/10 border border-primary/20">
+            This is your current path
+          </div>
+        ) : (
+          <button onClick={selectPath} disabled={selecting} data-clickable
+            className="relative overflow-hidden w-full py-2.5 rounded-full font-headline font-bold text-xs bg-white text-surface group/fill disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
+            <span className="absolute inset-0 z-0 bg-gradient-to-r from-primary to-primary-container rounded-[inherit] translate-y-full group-hover/fill:translate-y-0 transition-transform duration-500 ease-out" />
+            <span className="relative z-10 flex items-center justify-center gap-2 transition-colors duration-150 group-hover/fill:text-white">
+              {selecting ? (
+                <><span className="w-4 h-4 border-2 border-current/30 border-t-current rounded-full animate-spin" /> Updating...</>
+              ) : (
+                "Select This Path"
+              )}
+            </span>
+          </button>
+        )}
+      </div>
+    </motion.div>
   );
 }

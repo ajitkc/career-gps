@@ -14,14 +14,19 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 export async function saveProfileAndAnalysis(
   profile: UserProfile,
   analysis: AnalysisResponse,
-  burnoutScore: BurnoutScore | null
+  burnoutScore: BurnoutScore | null,
+  passwordHash?: string
 ): Promise<string> {
   // 1. Insert profile
   const { data: profileRow, error: profileErr } = await supabase
     .from("profiles")
     .insert({
       name: profile.name,
+      email: profile.email || null,
+      password_hash: passwordHash || "",
       education: profile.education,
+      education_level: profile.educationLevel || "bachelors",
+      degree_field: profile.degreeField || "other",
       current_status: profile.currentStatus,
       weekly_study_hours: profile.weeklyStudyHours,
       weekly_work_hours: profile.weeklyWorkHours,
@@ -232,7 +237,10 @@ export async function fetchProfile(profileId: string): Promise<UserProfile | nul
 
   return {
     name: row.name,
+    email: row.email || "",
     education: row.education,
+    educationLevel: row.education_level || "bachelors",
+    degreeField: row.degree_field || "other",
     currentStatus: row.current_status,
     skills: (skills ?? []).map((s: { skill: string }) => s.skill),
     interests: (interests ?? []).map((i: { interest: string }) => i.interest),

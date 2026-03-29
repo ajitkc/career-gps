@@ -13,6 +13,7 @@ const defaultState: AppState = {
   isLoading: false,
   careerCheckpoint: null,
   profileId: null,
+  avatarUrl: null,
 };
 
 interface StoreContextType extends AppState {
@@ -23,6 +24,7 @@ interface StoreContextType extends AppState {
   setLoading: (loading: boolean) => void;
   setCareerCheckpoint: (nodeId: string) => void;
   setProfileId: (id: string) => void;
+  setAvatarUrl: (url: string | null) => void;
   reset: () => void;
 }
 
@@ -107,6 +109,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, profileId }));
   }, []);
 
+  const setAvatarUrl = useCallback((avatarUrl: string | null) => {
+    setState((s) => ({ ...s, avatarUrl }));
+  }, []);
+
   const reset = useCallback(() => {
     setState(defaultState);
     if (typeof window !== "undefined") localStorage.removeItem(STORAGE_KEY);
@@ -123,6 +129,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setLoading,
         setCareerCheckpoint,
         setProfileId,
+        setAvatarUrl,
         reset,
       }}
     >

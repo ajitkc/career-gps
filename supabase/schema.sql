@@ -16,7 +16,10 @@ create table public.profiles (
 
   name text not null,
   email text unique,
+  password_hash text not null default '',
   education text not null,
+  education_level text not null default 'bachelors' check (education_level in ('high_school', 'bachelors', 'masters', 'other')),
+  degree_field text not null default 'other' check (degree_field in ('computer_science', 'it', 'engineering', 'science', 'management', 'commerce', 'arts', 'biology', 'other')),
   current_status text not null check (current_status in ('student', 'recent_graduate', 'working_professional', 'career_switcher')),
   weekly_study_hours integer not null default 0,
   weekly_work_hours integer not null default 0,
