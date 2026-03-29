@@ -4,6 +4,14 @@ AI-powered career guidance platform that generates personalized career roadmaps,
 
 Built with Next.js 16, Supabase, Gemini AI, and a premium dark UI.
 
+## Team members
+
+Team 68
+
+- Ajit KC
+- Suranjan Rana Magar
+- Barshad Panday
+
 ## Features
 
 - **Personalized Career Paths** — 3-5 career suggestions matched to your skills, interests, and degree field
