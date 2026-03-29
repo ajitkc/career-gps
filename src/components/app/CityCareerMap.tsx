@@ -321,6 +321,9 @@ export default function CityCareerMap({ careers, externalCareerIdx, externalTs }
     const nextRoles = career.progression.slice(stageIdx + 1);
     const currentRole = node.label;
 
+    // Regenerate resources for the new primary career
+    const { generateResources: genRes } = await import("@/data/mock-response");
+
     const updatedAnalysis = {
       ...store.analysis,
       career_matches: reorderedCareers,
@@ -334,6 +337,7 @@ export default function CityCareerMap({ careers, externalCareerIdx, externalTs }
           { title: `Prepare for ${nextRoles[0]}`, description: `Start building skills needed for the next level.`, duration: "Months 1-3", tasks: [`Study what ${nextRoles[0]} roles require`, "Take on stretch assignments", "Expand your professional network"] },
         ] : store.analysis.roadmap.next_3_months,
       },
+      resources: genRes(reorderedCareers, store.profile),
     };
 
     store.setAnalysis(updatedAnalysis);
@@ -770,25 +774,52 @@ function PanelDrawer({ panelData, analysis, onClose }: { panelData: { node: MNod
   const isCurrentPath = analysis?.career_matches[0]?.title === career.title;
 
   const selectPath = async () => {
-    if (!analysis || !store.profileId) return;
+    if (!analysis || !store.profile) return;
     setSelecting(true);
-    // Move this career to the top of career_matches
+
+    // Reorder: selected career becomes index 0
     const reordered = [career, ...analysis.career_matches.filter((c) => c.title !== career.title)];
+
+    // Generate updated resources for the new top career
+    const { generateResources: genRes } = await import("@/data/mock-response");
+
+    // Build updated roadmap with career-specific tasks
+    const currentRole = node.label;
+    const nextRoles = career.progression.slice(node.stageIdx + 1);
+    const skills = store.profile.skills.slice(0, 2).join(" and ") || "your core skills";
+
     const updatedAnalysis = {
       ...analysis,
       career_matches: reordered,
-      roadmap: { ...analysis.roadmap, current_stage: `${career.title} — ${node.label}` },
+      roadmap: {
+        ...analysis.roadmap,
+        current_stage: `${career.title} — ${currentRole}`,
+        next_30_days: [
+          { title: `Excel as ${currentRole}`, description: `Build expertise in ${skills} for your ${career.title} track.`, duration: "Weeks 1-4", tasks: [`Deliver a project as ${currentRole}`, "Get feedback from a mentor", "Identify one skill gap to close"] },
+        ],
+        next_3_months: nextRoles.length > 0 ? [
+          { title: `Prepare for ${nextRoles[0]}`, description: `Start building skills for the next level in ${career.title}.`, duration: "Months 1-3", tasks: [`Study ${nextRoles[0]} requirements`, "Take on stretch assignments", "Expand your network in the field"] },
+        ] : analysis.roadmap.next_3_months,
+      },
+      resources: genRes(reordered, store.profile),
     };
+
     store.setAnalysis(updatedAnalysis);
+
+    // Set checkpoint: this career is now at index 0, so c0-s{stageIdx}
     store.setCareerCheckpoint(`c0-s${node.stageIdx}`);
+
     // Persist to DB
-    try {
-      await fetch("/api/update-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
-      });
-    } catch { /* silent */ }
+    if (store.profileId) {
+      try {
+        await fetch("/api/update-analysis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
+        });
+      } catch { /* silent */ }
+    }
+
     setSelecting(false);
     onClose();
   };
