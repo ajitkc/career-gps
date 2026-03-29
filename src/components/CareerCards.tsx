@@ -2,56 +2,22 @@
 
 import { motion } from "framer-motion";
 import { Palette, Megaphone, BarChart3 } from "lucide-react";
+import SectionBadge from "./ui/section-badge";
+import { GlowCard } from "./ui/spotlight-card";
+import AnimatedButton from "./ui/animated-button";
 import { careers } from "@/data/careers";
 
-const iconMap: Record<string, React.ElementType> = {
-  Palette,
-  Megaphone,
-  BarChart3,
-};
+const iconMap: Record<string, React.ElementType> = { Palette, Megaphone, BarChart3 };
 
-const colorStyles: Record<string, { accent: string; accentBg: string; border: string; btnHover: string }> = {
-  primary: {
-    accent: "text-primary",
-    accentBg: "bg-primary/10",
-    border: "hover:border-primary/40",
-    btnHover: "hover:bg-primary hover:text-on-primary",
-  },
-  secondary: {
-    accent: "text-secondary",
-    accentBg: "bg-secondary/10",
-    border: "hover:border-secondary/40",
-    btnHover: "hover:bg-secondary hover:text-on-secondary",
-  },
-  tertiary: {
-    accent: "text-tertiary",
-    accentBg: "bg-tertiary/10",
-    border: "hover:border-tertiary/40",
-    btnHover: "hover:bg-tertiary hover:text-on-tertiary",
-  },
-};
-
-function StressBar({ percent, color }: { percent: number; color: string }) {
+function StressBar({ percent }: { percent: number }) {
   const segments = 4;
   const filled = Math.ceil((percent / 100) * segments);
-
-  const segmentColors: Record<string, string[]> = {
-    primary: ["bg-primary/60", "bg-primary/40", "bg-primary/20", "bg-primary/10"],
-    secondary: ["bg-secondary/60", "bg-secondary/40", "bg-secondary/20", "bg-secondary/10"],
-    tertiary: ["bg-tertiary-container/80", "bg-tertiary-container/60", "bg-tertiary-container/40", "bg-tertiary-container/20"],
-  };
-
   return (
-    <div className="h-2 bg-surface-container-highest rounded-full flex gap-1">
+    <div className="h-1.5 rounded-full flex gap-1">
       {Array.from({ length: segments }).map((_, i) => (
-        <div
-          key={i}
-          className={`h-full flex-1 rounded-full transition-all ${
-            i < filled
-              ? segmentColors[color]?.[i] ?? "bg-outline/20"
-              : "bg-surface-container-low"
-          }`}
-        />
+        <div key={i} className={`h-full flex-1 rounded-full transition-all ${
+          i < filled ? "bg-primary/60" : "bg-surface-container-high"
+        }`} />
       ))}
     </div>
   );
@@ -61,6 +27,7 @@ export default function CareerCards() {
   return (
     <section id="careers" className="py-32 bg-surface">
       <div className="max-w-7xl mx-auto px-6">
+        {/* Header — centered, consistent style */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -68,23 +35,20 @@ export default function CareerCards() {
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
           className="text-center mb-20"
         >
-          <span className="text-primary font-label text-xs tracking-[0.3em] uppercase font-semibold mb-4 block">
-            Discover
-          </span>
-          <h2 className="font-headline text-4xl font-bold mb-4">
-            Choose Your Lane
+          <SectionBadge>Discover</SectionBadge>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl tracking-tight mb-4">
+            <span className="font-headline font-bold">Choose Your </span>
+            <span className="font-serif italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary-container pr-1">Lane</span>
           </h2>
-          <p className="text-on-surface-variant max-w-xl mx-auto">
-            Different paths require different fuels. We&apos;ve mapped the terrain
-            for the world&apos;s most sought-after careers.
+          <p className="text-on-surface-variant max-w-xl mx-auto text-base md:text-lg font-body">
+            Different paths require different fuels. We&apos;ve mapped the terrain for the world&apos;s most sought-after careers.
           </p>
         </motion.div>
 
+        {/* Cards — GlowCard with brand glow */}
         <div className="grid md:grid-cols-3 gap-8">
           {careers.map((career, i) => {
             const Icon = iconMap[career.icon];
-            const styles = colorStyles[career.color];
-            const isHighlight = career.growthPercent >= 95;
 
             return (
               <motion.div
@@ -92,110 +56,57 @@ export default function CareerCards() {
                 initial={{ opacity: 0, y: 50 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-80px" }}
-                transition={{
-                  duration: 0.5,
-                  delay: i * 0.12,
-                  ease: [0.4, 0, 0.2, 1],
-                }}
-                className={`relative group rounded-2xl p-8 border flex flex-col justify-between transition-all duration-500 ${
-                  isHighlight
-                    ? "bg-surface-container-high/40 border-primary-container/40 shadow-[0_0_40px_-15px_rgba(46,91,255,0.4)] overflow-hidden"
-                    : `bg-surface-container-high border-outline-variant/10 ${styles.border}`
-                }`}
+                transition={{ duration: 0.5, delay: i * 0.12, ease: [0.4, 0, 0.2, 1] }}
               >
-                {/* Highlight Glow */}
-                {isHighlight && (
-                  <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary-container/20 blur-[80px] pointer-events-none" />
-                )}
-
-                {/* Badge */}
-                {isHighlight && (
-                  <div className="absolute -top-3 right-4 bg-primary-container text-on-primary-container text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                    Elite Path
-                  </div>
-                )}
-
-                <div className="space-y-6 relative z-10">
+                <GlowCard glowColor="blue" className="h-full flex flex-col group">
                   {/* Header */}
-                  <div className="flex justify-between items-start">
-                    <div
-                      className={`w-14 h-14 rounded-2xl ${styles.accentBg} flex items-center justify-center ${styles.accent} group-hover:scale-110 transition-transform`}
-                    >
-                      {Icon && <Icon className="w-7 h-7" />}
+                  <div className="flex justify-between items-start mb-5">
+                    <div className="w-12 h-12 rounded-xl bg-white/[0.06] flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                      {Icon && <Icon className="w-6 h-6" />}
                     </div>
                     <div className="flex flex-col items-end">
-                      <span className="text-xs font-label text-on-surface-variant/60 uppercase tracking-widest">
-                        Growth
-                      </span>
-                      <span
-                        className={`${styles.accent} font-headline font-bold text-lg`}
-                      >
-                        {career.growth}
-                      </span>
+                      <span className="text-[10px] font-label text-on-surface-variant/50 uppercase tracking-widest">Growth</span>
+                      <span className="text-primary font-headline font-bold text-lg">{career.growth}</span>
                     </div>
                   </div>
 
                   {/* Title */}
-                  <div>
-                    <h3 className="text-2xl font-headline font-bold">
-                      {career.title}
-                    </h3>
-                    <p className="text-on-surface-variant text-sm mt-2 leading-relaxed">
-                      {career.description}
-                    </p>
-                  </div>
+                  <h3 className="text-xl font-headline font-bold text-on-surface mb-2">{career.title}</h3>
+                  <p className="text-on-surface-variant text-sm leading-relaxed font-body mb-6">{career.description}</p>
 
                   {/* Metrics */}
-                  <div className="space-y-4 pt-4">
+                  <div className="space-y-4 mb-6">
                     <div>
-                      <div className="flex justify-between text-xs mb-1 uppercase font-label tracking-tighter text-on-surface-variant">
+                      <div className="flex justify-between text-[10px] mb-1.5 uppercase font-label tracking-widest text-on-surface-variant/60">
                         <span>Growth Potential</span>
-                        <span className={`${styles.accent} font-bold`}>
-                          {career.growthPercent}%
-                        </span>
+                        <span className="text-primary font-bold">{career.growthPercent}%</span>
                       </div>
-                      <div className="h-1.5 w-full bg-surface-container-lowest rounded-full overflow-hidden">
+                      <div className="h-1.5 w-full bg-surface-container-high rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
                           whileInView={{ width: `${career.growthPercent}%` }}
                           viewport={{ once: true }}
                           transition={{ duration: 1, delay: 0.3 + i * 0.15 }}
-                          className={`h-full ${
-                            career.color === "primary"
-                              ? "bg-primary"
-                              : career.color === "secondary"
-                              ? "bg-secondary"
-                              : "bg-primary-container"
-                          }`}
+                          className="h-full bg-primary rounded-full"
                         />
                       </div>
                     </div>
-
                     <div>
-                      <div className="flex justify-between text-xs mb-2 uppercase font-label tracking-tighter text-on-surface-variant">
+                      <div className="flex justify-between text-[10px] mb-1.5 uppercase font-label tracking-widest text-on-surface-variant/60">
                         <span>Stress Level</span>
-                        <span className={`${styles.accent} font-bold`}>
-                          {career.stress}
-                        </span>
+                        <span className="font-bold">{career.stress}</span>
                       </div>
-                      <StressBar
-                        percent={career.stressPercent}
-                        color={career.color}
-                      />
+                      <StressBar percent={career.stressPercent} />
                     </div>
                   </div>
-                </div>
 
-                {/* CTA */}
-                <button
-                  className={`mt-8 w-full py-4 rounded-xl border border-outline-variant/30 font-headline font-bold text-sm transition-all duration-300 active:scale-95 relative z-10 ${
-                    isHighlight
-                      ? "bg-gradient-to-r from-primary to-primary-container text-on-primary-container shadow-xl shadow-primary-container/20 hover:brightness-110 border-0"
-                      : `${styles.accent} hover:bg-white/5`
-                  }`}
-                >
-                  Analyze Path
-                </button>
+                  {/* CTA — navigates to onboarding */}
+                  <div className="mt-auto pt-2 flex justify-start">
+                    <AnimatedButton href="/onboarding" size="sm" variant="outline">
+                      Analyze Path
+                    </AnimatedButton>
+                  </div>
+                </GlowCard>
               </motion.div>
             );
           })}

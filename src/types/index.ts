@@ -28,9 +28,15 @@ export type CareerStage =
   | "senior"
   | "lead";
 
+export type EducationLevel = "high_school" | "bachelors" | "masters" | "other";
+export type DegreeField = "computer_science" | "it" | "engineering" | "science" | "management" | "commerce" | "arts" | "biology" | "other";
+
 export interface UserProfile {
   name: string;
+  email: string;
   education: string;
+  educationLevel: EducationLevel;
+  degreeField: DegreeField;
   currentStatus: CurrentStatus;
   skills: string[];
   interests: string[];
@@ -115,6 +121,8 @@ export interface CheckInResponse {
   updated_recommendations: string[];
   updated_burnout: BurnoutAssessment;
   suggested_resources: Resource[];
+  /** If the conversation warrants new/updated career paths, Gemini returns them here */
+  updated_career_matches?: CareerMatch[];
 }
 
 // --- Burnout Scoring (deterministic) ---
@@ -138,4 +146,8 @@ export interface AppState {
   isLoading: boolean;
   /** The node ID representing the user's actual current career position */
   careerCheckpoint: string | null;
+  /** Supabase profile row ID for persisting check-ins */
+  profileId: string | null;
+  /** Base64 data URL for profile picture */
+  avatarUrl: string | null;
 }

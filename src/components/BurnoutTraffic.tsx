@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { AlertTriangle, Heart, Activity, Shield } from "lucide-react";
 import type { BurnoutRisk } from "@/data/careers";
+import SectionBadge from "./ui/section-badge";
+import { GlowCard } from "./ui/spotlight-card";
 
 const burnoutLevels: { risk: BurnoutRisk; label: string; description: string }[] = [
   { risk: "low", label: "Light Traffic", description: "Smooth sailing. Your pace is sustainable." },
@@ -83,11 +85,10 @@ export default function BurnoutTraffic() {
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
         >
-          <span className="bg-tertiary-container/20 text-tertiary px-4 py-1 rounded-full text-xs font-bold font-label tracking-widest uppercase mb-6 inline-block">
-            Vital Monitoring
-          </span>
-          <h2 className="font-headline text-4xl md:text-5xl font-extrabold mb-8">
-            Avoid the Red Zones
+          <SectionBadge align="left">Vital Monitoring</SectionBadge>
+          <h2 className="text-3xl sm:text-4xl md:text-5xl tracking-tight mb-6">
+            <span className="font-headline font-bold">Avoid the </span>
+            <span className="font-serif italic font-normal text-transparent bg-clip-text bg-gradient-to-r from-primary via-secondary to-primary-container pr-1">Red Zones</span>
           </h2>
           <p className="text-on-surface-variant text-lg mb-8 leading-relaxed">
             Most roadmaps ignore the driver. We don&apos;t. Our AI monitors your
@@ -95,8 +96,8 @@ export default function BurnoutTraffic() {
           </p>
 
           <div className="space-y-4">
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-surface/50 border border-tertiary/20 group hover:border-tertiary/50 transition-colors">
-              <div className="w-10 h-10 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary flex-shrink-0">
+            <GlowCard glowColor="blue" className="flex items-start gap-4 group">
+              <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center text-tertiary flex-shrink-0 group-hover:scale-110 transition-transform">
                 <AlertTriangle className="w-5 h-5" />
               </div>
               <div>
@@ -107,10 +108,10 @@ export default function BurnoutTraffic() {
                   Real-time alerts when task density exceeds recovery capacity.
                 </p>
               </div>
-            </div>
+            </GlowCard>
 
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-surface/50 border border-outline-variant/20">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
+            <GlowCard glowColor="blue" className="flex items-start gap-4 group">
+              <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center text-primary flex-shrink-0 group-hover:scale-110 transition-transform">
                 <Heart className="w-5 h-5" />
               </div>
               <div>
@@ -121,10 +122,10 @@ export default function BurnoutTraffic() {
                   The road widens and slows down when your stress meter peaks.
                 </p>
               </div>
-            </div>
+            </GlowCard>
 
-            <div className="flex items-start gap-4 p-4 rounded-xl bg-surface/50 border border-outline-variant/20">
-              <div className="w-10 h-10 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary flex-shrink-0">
+            <GlowCard glowColor="blue" className="flex items-start gap-4 group">
+              <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center text-secondary flex-shrink-0 group-hover:scale-110 transition-transform">
                 <Shield className="w-5 h-5" />
               </div>
               <div>
@@ -135,7 +136,7 @@ export default function BurnoutTraffic() {
                   Scheduled recovery periods auto-injected into your roadmap.
                 </p>
               </div>
-            </div>
+            </GlowCard>
           </div>
         </motion.div>
 

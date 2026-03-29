@@ -6,13 +6,34 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   User, GraduationCap, Briefcase, Zap, Heart,
   Clock, Moon, Brain, Target, ArrowRight, ArrowLeft,
-  X, Plus, Loader2,
+  X, Plus, Loader2, Lock, Mail,
 } from "lucide-react";
+import Logo from "@/components/ui/logo";
 import { useStore } from "@/lib/store";
 import { calculateBurnoutScore } from "@/lib/burnout";
-import type { UserProfile, CurrentStatus, EmotionalState, CareerStage } from "@/types";
+import type { UserProfile, CurrentStatus, EmotionalState, CareerStage, EducationLevel, DegreeField } from "@/types";
+
+const EDU_LEVELS: { value: EducationLevel; label: string }[] = [
+  { value: "high_school", label: "High School" },
+  { value: "bachelors", label: "Bachelor's" },
+  { value: "masters", label: "Master's" },
+  { value: "other", label: "Other" },
+];
+
+const DEGREE_FIELDS: { value: DegreeField; label: string }[] = [
+  { value: "computer_science", label: "Computer Science" },
+  { value: "it", label: "Information Technology" },
+  { value: "engineering", label: "Engineering" },
+  { value: "science", label: "Science" },
+  { value: "management", label: "Management" },
+  { value: "commerce", label: "Commerce" },
+  { value: "arts", label: "Arts" },
+  { value: "biology", label: "Biology" },
+  { value: "other", label: "Other" },
+];
 
 const STEPS = [
+  { id: "account", label: "Create Account", icon: Lock },
   { id: "basics", label: "About You", icon: User },
   { id: "skills", label: "Skills & Interests", icon: Zap },
   { id: "routine", label: "Your Routine", icon: Clock },
@@ -27,14 +48,14 @@ const STATUS_OPTIONS: { value: CurrentStatus; label: string; desc: string }[] = 
   { value: "career_switcher", label: "Career Switcher", desc: "Looking to change fields" },
 ];
 
-const EMOTIONAL_OPTIONS: { value: EmotionalState; label: string; emoji: string }[] = [
-  { value: "motivated", label: "Motivated", emoji: "+" },
-  { value: "excited", label: "Excited", emoji: "!" },
-  { value: "neutral", label: "Neutral", emoji: "~" },
-  { value: "anxious", label: "Anxious", emoji: "?" },
-  { value: "stuck", label: "Stuck", emoji: "=" },
-  { value: "overwhelmed", label: "Overwhelmed", emoji: "#" },
-  { value: "burned_out", label: "Burned Out", emoji: "x" },
+const EMOTIONAL_OPTIONS: { value: EmotionalState; label: string }[] = [
+  { value: "motivated", label: "Motivated" },
+  { value: "excited", label: "Excited" },
+  { value: "neutral", label: "Neutral" },
+  { value: "anxious", label: "Anxious" },
+  { value: "stuck", label: "Stuck" },
+  { value: "overwhelmed", label: "Overwhelmed" },
+  { value: "burned_out", label: "Burned Out" },
 ];
 
 const SKILL_SUGGESTIONS = [
@@ -50,80 +71,43 @@ const INTEREST_SUGGESTIONS = [
 ];
 
 function TagInput({
-  tags,
-  onAdd,
-  onRemove,
-  suggestions,
-  placeholder,
+  tags, onAdd, onRemove, suggestions, placeholder,
 }: {
-  tags: string[];
-  onAdd: (tag: string) => void;
-  onRemove: (tag: string) => void;
-  suggestions: string[];
-  placeholder: string;
+  tags: string[]; onAdd: (tag: string) => void; onRemove: (tag: string) => void; suggestions: string[]; placeholder: string;
 }) {
   const [input, setInput] = useState("");
-
   const add = () => {
     const val = input.trim();
-    if (val && !tags.includes(val)) {
-      onAdd(val);
-      setInput("");
-    }
+    if (val && !tags.includes(val)) { onAdd(val); setInput(""); }
   };
-
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())}
-          placeholder={placeholder}
-          className="flex-1 px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-        />
-        <button
-          type="button"
-          onClick={add}
-          className="px-4 py-3 bg-primary-container text-on-primary-container rounded-xl font-bold text-sm hover:brightness-110 transition-all active:scale-95"
-        >
+        <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), add())} placeholder={placeholder}
+          className="flex-1 px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-2xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300" />
+        <button type="button" onClick={add}
+          className="px-4 py-3 bg-primary-container text-on-primary-container rounded-xl font-bold text-sm hover:brightness-110 transition-all active:scale-95">
           <Plus className="w-4 h-4" />
         </button>
       </div>
-
-      {/* Selected Tags */}
       {tags.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {tags.map((tag) => (
-            <span
-              key={tag}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 text-primary rounded-lg text-xs font-bold"
-            >
+            <span key={tag} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/15 text-primary rounded-lg text-xs font-bold">
               {tag}
-              <button type="button" onClick={() => onRemove(tag)} className="hover:text-on-surface transition-colors">
-                <X className="w-3 h-3" />
-              </button>
+              <button type="button" onClick={() => onRemove(tag)} className="hover:text-on-surface transition-colors"><X className="w-3 h-3" /></button>
             </span>
           ))}
         </div>
       )}
-
-      {/* Suggestions */}
       <div className="flex flex-wrap gap-2">
-        {suggestions
-          .filter((s) => !tags.includes(s))
-          .slice(0, 8)
-          .map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => onAdd(s)}
-              className="px-3 py-1.5 bg-surface-container border border-outline-variant/10 text-on-surface-variant rounded-lg text-xs font-medium hover:bg-surface-container-high hover:text-on-surface transition-all"
-            >
-              + {s}
-            </button>
-          ))}
+        {suggestions.filter((s) => !tags.includes(s)).slice(0, 8).map((s) => (
+          <button key={s} type="button" onClick={() => onAdd(s)}
+            className="px-3 py-1.5 bg-surface-container border border-outline-variant/10 text-on-surface-variant rounded-lg text-xs font-medium hover:bg-surface-container-high hover:text-on-surface transition-all">
+            + {s}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -135,9 +119,15 @@ export default function OnboardingFlow() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState<UserProfile>({
     name: "",
+    email: "",
     education: "",
+    educationLevel: "bachelors",
+    degreeField: "computer_science",
     currentStatus: "student",
     skills: [],
     interests: [],
@@ -154,11 +144,12 @@ export default function OnboardingFlow() {
 
   const canProceed = () => {
     switch (step) {
-      case 0: return form.name.trim().length > 0 && form.education.trim().length > 0;
-      case 1: return form.skills.length > 0 && form.interests.length > 0;
-      case 2: return true;
+      case 0: return form.email.trim().includes("@") && password.length >= 6 && password === confirmPassword;
+      case 1: return form.name.trim().length > 0;
+      case 2: return form.skills.length > 0 && form.interests.length > 0;
       case 3: return true;
-      case 4: return form.currentGoal.trim().length > 0;
+      case 4: return true;
+      case 5: return form.currentGoal.trim().length > 0;
       default: return true;
     }
   };
@@ -169,7 +160,6 @@ export default function OnboardingFlow() {
     try {
       store.setProfile(form);
       store.setBurnoutScore(calculateBurnoutScore(form));
-      // Set initial checkpoint based on career stage
       const stageToLevel: Record<string, number> = {
         exploring: 0, student: 0, intern: 0, junior: 1, mid: 2, senior: 3, lead: 4,
       };
@@ -179,20 +169,57 @@ export default function OnboardingFlow() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, password }),
       });
 
-      if (!res.ok) throw new Error("Analysis failed");
-      const analysis = await res.json();
-      store.setAnalysis(analysis);
+      const data = await res.json();
+
+      if (!res.ok) {
+        // Handle duplicate email (409) or other errors
+        if (res.status === 409) {
+          setError(data.error || "An account with this email already exists.");
+          setStep(0); // Go back to account step
+          setLoading(false);
+          return;
+        }
+        throw new Error(data.error || "Analysis failed");
+      }
+
+      store.setAnalysis(data);
+      if (data.profileId) store.setProfileId(data.profileId);
+      if (data.burnoutScore) store.setBurnoutScore(data.burnoutScore);
       router.push("/dashboard");
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setLoading(false);
     }
   };
 
+  const checkEmailAndProceed = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/check-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: form.email.trim() }),
+      });
+      const data = await res.json();
+      if (data.exists) {
+        setError("An account with this email already exists. Please log in instead.");
+        setLoading(false);
+        return;
+      }
+      setStep(1);
+    } catch {
+      // If check fails, proceed anyway — the analyze endpoint will catch it
+      setStep(1);
+    }
+    setLoading(false);
+  };
+
   const next = () => {
+    if (step === 0) { checkEmailAndProceed(); return; }
     if (step < STEPS.length - 1) setStep(step + 1);
     else handleSubmit();
   };
@@ -202,16 +229,15 @@ export default function OnboardingFlow() {
   };
 
   const progress = ((step + 1) / STEPS.length) * 100;
+  const inputCls = "w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-2xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all duration-300";
 
   return (
     <div className="min-h-screen bg-surface flex flex-col">
       {/* Header */}
-      <nav className="bg-surface/60 backdrop-blur-xl border-b border-outline-variant/15 px-6 py-4">
+      <nav className="bg-surface/70 backdrop-blur-xl border-b border-outline-variant/15 px-6 py-3.5">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          <a href="/" className="font-headline font-bold text-on-surface tracking-tighter text-lg">
-            Career GPS
-          </a>
-          <span className="text-xs font-label text-on-surface-variant tracking-widest uppercase">
+          <a href="/" aria-label="Career GPS home"><Logo className="h-6 w-auto" /></a>
+          <span className="text-[10px] font-label text-on-surface-variant tracking-widest uppercase font-bold">
             Step {step + 1} of {STEPS.length}
           </span>
         </div>
@@ -223,103 +249,134 @@ export default function OnboardingFlow() {
           <div className="mb-8">
             <div className="flex justify-between items-end mb-3">
               <div className="flex items-center gap-2">
-                {(() => {
-                  const Icon = STEPS[step].icon;
-                  return <Icon className="w-4 h-4 text-primary" />;
-                })()}
-                <span className="text-sm font-headline font-bold text-on-surface">
-                  {STEPS[step].label}
-                </span>
+                {(() => { const Icon = STEPS[step].icon; return <Icon className="w-4 h-4 text-primary" />; })()}
+                <span className="text-sm font-headline font-bold text-on-surface">{STEPS[step].label}</span>
               </div>
-              <span className="text-xs font-label text-primary font-bold">
-                {Math.round(progress)}%
-              </span>
+              <span className="text-xs font-label text-primary font-bold">{Math.round(progress)}%</span>
             </div>
             <div className="h-1.5 bg-surface-container-high rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-primary-container to-primary rounded-full"
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-              />
+              <motion.div className="h-full bg-gradient-to-r from-primary-container to-primary rounded-full"
+                animate={{ width: `${progress}%` }} transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }} />
             </div>
           </div>
 
           {/* Form Card */}
-          <div className="glass-panel rounded-2xl border border-outline-variant/10 p-8 md:p-10">
+          <div className="glass-panel rounded-3xl border border-outline-variant/10 p-8 md:p-10">
             <AnimatePresence mode="wait">
-              <motion.div
-                key={step}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              >
-                {/* Step 0: Basics */}
+              <motion.div key={step} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}>
+
+                {/* Step 0: Create Account */}
                 {step === 0 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
-                        Let&apos;s get to know you
-                      </h2>
-                      <p className="text-on-surface-variant">
-                        No pressure — just the basics so we can give you relevant guidance.
-                      </p>
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">Create your account</h2>
+                      <p className="text-on-surface-variant">Your email and password — that&apos;s all we need to get started.</p>
                     </div>
-
                     <div className="space-y-4">
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-1.5 block">
-                          What should we call you?
-                        </label>
-                        <input
-                          type="text"
-                          value={form.name}
-                          onChange={(e) => update("name", e.target.value)}
-                          placeholder="Your first name"
-                          className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-                        />
+                        <label className="text-sm font-bold text-on-surface-variant mb-1.5 block">Email address</label>
+                        <div className="relative">
+                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
+                          <input type="email" value={form.email} onChange={(e) => update("email", e.target.value)}
+                            placeholder="you@example.com" className={`${inputCls} pl-11`} autoFocus />
+                        </div>
                       </div>
-
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-1.5 block">
-                          Education background
-                        </label>
-                        <input
-                          type="text"
-                          value={form.education}
-                          onChange={(e) => update("education", e.target.value)}
-                          placeholder="e.g. Bachelor's in Computer Science"
-                          className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all"
-                        />
+                        <label className="text-sm font-bold text-on-surface-variant mb-1.5 block">Password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
+                          <input type={showPassword ? "text" : "password"} value={password}
+                            onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters"
+                            className={`${inputCls} pl-11 pr-16`} />
+                          <button type="button" onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant hover:text-primary transition-colors">
+                            {showPassword ? "Hide" : "Show"}
+                          </button>
+                        </div>
+                        {password.length > 0 && password.length < 6 && (
+                          <p className="text-xs text-secondary mt-1.5">Password must be at least 6 characters</p>
+                        )}
                       </div>
-
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-3 block">
-                          Where are you right now?
-                        </label>
+                        <label className="text-sm font-bold text-on-surface-variant mb-1.5 block">Confirm password</label>
+                        <div className="relative">
+                          <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant pointer-events-none" />
+                          <input type={showPassword ? "text" : "password"} value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Re-enter your password"
+                            className={`${inputCls} pl-11`} />
+                        </div>
+                        {confirmPassword.length > 0 && password !== confirmPassword && (
+                          <p className="text-xs text-tertiary mt-1.5">Passwords don&apos;t match</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
+                      <p className="text-sm text-on-surface-variant">
+                        <span className="font-bold text-primary">Already have an account?</span>{" "}
+                        <a href="/login" className="underline hover:text-primary transition-colors">Log in here</a>
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 1: Basics */}
+                {step === 1 && (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">Let&apos;s get to know you</h2>
+                      <p className="text-on-surface-variant">No pressure — just the basics so we can give you relevant guidance.</p>
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-bold text-on-surface-variant mb-1.5 block">What should we call you?</label>
+                        <input type="text" value={form.name} onChange={(e) => update("name", e.target.value)}
+                          placeholder="Your first name" className={inputCls} />
+                      </div>
+                      <div>
+                        <label className="text-sm font-bold text-on-surface-variant mb-3 block">Education level</label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {EDU_LEVELS.map((opt) => (
+                            <button key={opt.value} type="button" onClick={() => {
+                              update("educationLevel", opt.value);
+                              const field = DEGREE_FIELDS.find((d) => d.value === form.degreeField)?.label || form.degreeField;
+                              update("education", `${opt.label} in ${field}`);
+                            }}
+                              className={`p-3 rounded-2xl border text-center transition-all duration-300 text-sm font-headline font-bold ${form.educationLevel === opt.value ? "border-primary/40 bg-primary/10" : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-bold text-on-surface-variant mb-3 block">Field of study</label>
+                        <div className="grid grid-cols-3 gap-3">
+                          {DEGREE_FIELDS.map((opt) => (
+                            <button key={opt.value} type="button" onClick={() => {
+                              update("degreeField", opt.value);
+                              const level = EDU_LEVELS.find((l) => l.value === form.educationLevel)?.label || form.educationLevel;
+                              update("education", `${level} in ${opt.label}`);
+                            }}
+                              className={`p-3 rounded-2xl border text-center transition-all duration-300 text-sm font-headline font-bold ${form.degreeField === opt.value ? "border-primary/40 bg-primary/10" : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"}`}>
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="text-sm font-bold text-on-surface-variant mb-3 block">Where are you right now?</label>
                         <div className="grid grid-cols-2 gap-3">
                           {STATUS_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => update("currentStatus", opt.value)}
-                              className={`p-4 rounded-xl border text-left transition-all ${
-                                form.currentStatus === opt.value
-                                  ? "border-primary/40 bg-primary/10"
-                                  : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"
-                              }`}
-                            >
+                            <button key={opt.value} type="button" onClick={() => update("currentStatus", opt.value)}
+                              className={`p-4 rounded-2xl border text-left transition-all duration-300 ${form.currentStatus === opt.value ? "border-primary/40 bg-primary/10" : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"}`}>
                               <div className="font-headline font-bold text-sm">{opt.label}</div>
                               <div className="text-xs text-on-surface-variant mt-0.5">{opt.desc}</div>
                             </button>
                           ))}
                         </div>
                       </div>
-
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-3 block">
-                          Where are you in your career?
-                        </label>
+                        <label className="text-sm font-bold text-on-surface-variant mb-3 block">Where are you in your career?</label>
                         <div className="grid grid-cols-2 gap-3">
                           {([
                             { value: "exploring" as CareerStage, label: "Just Exploring" },
@@ -329,16 +386,8 @@ export default function OnboardingFlow() {
                             { value: "mid" as CareerStage, label: "Mid-level" },
                             { value: "senior" as CareerStage, label: "Senior / Lead" },
                           ]).map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => update("careerStage", opt.value)}
-                              className={`p-3 rounded-xl border text-left transition-all text-sm font-headline font-bold ${
-                                form.careerStage === opt.value
-                                  ? "border-primary/40 bg-primary/10"
-                                  : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"
-                              }`}
-                            >
+                            <button key={opt.value} type="button" onClick={() => update("careerStage", opt.value)}
+                              className={`p-3 rounded-2xl border text-left transition-all duration-300 text-sm font-headline font-bold ${form.careerStage === opt.value ? "border-primary/40 bg-primary/10" : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"}`}>
                               {opt.label}
                             </button>
                           ))}
@@ -348,118 +397,58 @@ export default function OnboardingFlow() {
                   </div>
                 )}
 
-                {/* Step 1: Skills & Interests */}
-                {step === 1 && (
+                {/* Step 2: Skills & Interests */}
+                {step === 2 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
-                        What do you bring to the table?
-                      </h2>
-                      <p className="text-on-surface-variant">
-                        Add your skills and what excites you. Be honest — there are no wrong answers.
-                      </p>
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">What do you bring to the table?</h2>
+                      <p className="text-on-surface-variant">Add your skills and what excites you. Be honest — there are no wrong answers.</p>
                     </div>
-
                     <div className="space-y-6">
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2">
-                          <Zap className="w-4 h-4 text-primary" /> Your Skills
-                        </label>
-                        <TagInput
-                          tags={form.skills}
-                          onAdd={(s) => update("skills", [...form.skills, s])}
-                          onRemove={(s) => update("skills", form.skills.filter((x) => x !== s))}
-                          suggestions={SKILL_SUGGESTIONS}
-                          placeholder="Type a skill and press Enter"
-                        />
+                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2"><Zap className="w-4 h-4 text-primary" /> Your Skills</label>
+                        <TagInput tags={form.skills} onAdd={(s) => update("skills", [...form.skills, s])}
+                          onRemove={(s) => update("skills", form.skills.filter((x) => x !== s))} suggestions={SKILL_SUGGESTIONS} placeholder="Type a skill and press Enter" />
                       </div>
-
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2">
-                          <Heart className="w-4 h-4 text-secondary" /> Your Interests
-                        </label>
-                        <TagInput
-                          tags={form.interests}
-                          onAdd={(s) => update("interests", [...form.interests, s])}
-                          onRemove={(s) => update("interests", form.interests.filter((x) => x !== s))}
-                          suggestions={INTEREST_SUGGESTIONS}
-                          placeholder="Type an interest and press Enter"
-                        />
+                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2"><Heart className="w-4 h-4 text-secondary" /> Your Interests</label>
+                        <TagInput tags={form.interests} onAdd={(s) => update("interests", [...form.interests, s])}
+                          onRemove={(s) => update("interests", form.interests.filter((x) => x !== s))} suggestions={INTEREST_SUGGESTIONS} placeholder="Type an interest and press Enter" />
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Step 2: Routine */}
-                {step === 2 && (
+                {/* Step 3: Routine */}
+                {step === 3 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
-                        What does your week look like?
-                      </h2>
-                      <p className="text-on-surface-variant">
-                        This helps us understand your capacity and burnout risk. Be realistic.
-                      </p>
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">What does your week look like?</h2>
+                      <p className="text-on-surface-variant">This helps us understand your capacity and burnout risk. Be realistic.</p>
                     </div>
-
                     <div className="space-y-6">
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2">
-                          <Briefcase className="w-4 h-4 text-primary" />
-                          Weekly work hours
-                        </label>
+                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2"><Briefcase className="w-4 h-4 text-primary" />Weekly work hours</label>
                         <div className="flex items-center gap-4">
-                          <input
-                            type="range"
-                            min={0}
-                            max={80}
-                            value={form.weeklyWorkHours}
-                            onChange={(e) => update("weeklyWorkHours", Number(e.target.value))}
-                            className="flex-1 h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary"
-                          />
-                          <span className="w-16 text-right font-headline font-bold text-primary">
-                            {form.weeklyWorkHours}h
-                          </span>
+                          <input type="range" min={0} max={80} value={form.weeklyWorkHours} onChange={(e) => update("weeklyWorkHours", Number(e.target.value))}
+                            className="flex-1 h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" />
+                          <span className="w-16 text-right font-headline font-bold text-primary">{form.weeklyWorkHours}h</span>
                         </div>
                       </div>
-
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2">
-                          <GraduationCap className="w-4 h-4 text-secondary" />
-                          Weekly study/learning hours
-                        </label>
+                        <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2"><GraduationCap className="w-4 h-4 text-secondary" />Weekly study/learning hours</label>
                         <div className="flex items-center gap-4">
-                          <input
-                            type="range"
-                            min={0}
-                            max={60}
-                            value={form.weeklyStudyHours}
-                            onChange={(e) => update("weeklyStudyHours", Number(e.target.value))}
-                            className="flex-1 h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary"
-                          />
-                          <span className="w-16 text-right font-headline font-bold text-secondary">
-                            {form.weeklyStudyHours}h
-                          </span>
+                          <input type="range" min={0} max={60} value={form.weeklyStudyHours} onChange={(e) => update("weeklyStudyHours", Number(e.target.value))}
+                            className="flex-1 h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" />
+                          <span className="w-16 text-right font-headline font-bold text-secondary">{form.weeklyStudyHours}h</span>
                         </div>
                       </div>
-
                       <div>
-                        <label className="text-sm font-bold text-on-surface-variant mb-3 flex items-center gap-2">
-                          <Moon className="w-4 h-4 text-tertiary" />
-                          Sleep quality
-                        </label>
+                        <label className="text-sm font-bold text-on-surface-variant mb-3 flex items-center gap-2"><Moon className="w-4 h-4 text-tertiary" />Sleep quality</label>
                         <div className="grid grid-cols-4 gap-2">
                           {(["poor", "fair", "good", "great"] as const).map((q) => (
-                            <button
-                              key={q}
-                              type="button"
-                              onClick={() => update("sleepQuality", q)}
-                              className={`py-3 rounded-xl border text-sm font-bold capitalize transition-all ${
-                                form.sleepQuality === q
-                                  ? "border-primary/40 bg-primary/10 text-primary"
-                                  : "border-outline-variant/15 text-on-surface-variant hover:bg-surface-container"
-                              }`}
-                            >
+                            <button key={q} type="button" onClick={() => update("sleepQuality", q)}
+                              className={`py-3 rounded-xl border text-sm font-bold capitalize transition-all ${form.sleepQuality === q ? "border-primary/40 bg-primary/10 text-primary" : "border-outline-variant/15 text-on-surface-variant hover:bg-surface-container"}`}>
                               {q}
                             </button>
                           ))}
@@ -469,37 +458,18 @@ export default function OnboardingFlow() {
                   </div>
                 )}
 
-                {/* Step 3: Emotional State */}
-                {step === 3 && (
+                {/* Step 4: Emotional State */}
+                {step === 4 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
-                        How are you feeling right now?
-                      </h2>
-                      <p className="text-on-surface-variant">
-                        There&apos;s no wrong answer. This helps us calibrate our advice to where you actually are.
-                      </p>
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">How are you feeling right now?</h2>
+                      <p className="text-on-surface-variant">There&apos;s no wrong answer. This helps us calibrate our advice to where you actually are.</p>
                     </div>
-
                     <div className="grid grid-cols-1 gap-3">
                       {EMOTIONAL_OPTIONS.map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => update("emotionalState", opt.value)}
-                          className={`flex items-center gap-4 p-4 rounded-xl border text-left transition-all ${
-                            form.emotionalState === opt.value
-                              ? "border-primary/40 bg-primary/10"
-                              : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"
-                          }`}
-                        >
-                          <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold ${
-                              form.emotionalState === opt.value
-                                ? "bg-primary text-on-primary"
-                                : "bg-surface-container-high text-on-surface-variant"
-                            }`}
-                          >
+                        <button key={opt.value} type="button" onClick={() => update("emotionalState", opt.value)}
+                          className={`flex items-center gap-4 p-4 rounded-2xl border text-left transition-all duration-300 ${form.emotionalState === opt.value ? "border-primary/40 bg-primary/10" : "border-outline-variant/15 bg-surface-container-lowest hover:bg-surface-container"}`}>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg font-bold ${form.emotionalState === opt.value ? "bg-primary text-on-primary" : "bg-surface-container-high text-on-surface-variant"}`}>
                             <Brain className="w-5 h-5" />
                           </div>
                           <span className="font-headline font-bold">{opt.label}</span>
@@ -509,29 +479,19 @@ export default function OnboardingFlow() {
                   </div>
                 )}
 
-                {/* Step 4: Goal */}
-                {step === 4 && (
+                {/* Step 5: Goal */}
+                {step === 5 && (
                   <div className="space-y-6">
                     <div>
-                      <h2 className="font-headline text-2xl md:text-3xl font-extrabold tracking-tight mb-2">
-                        What are you trying to achieve?
-                      </h2>
-                      <p className="text-on-surface-variant">
-                        Tell us in your own words. &quot;Get a job in AI&quot; or &quot;figure out what I want to do&quot; — both are valid.
-                      </p>
+                      <h2 className="text-2xl md:text-3xl tracking-tight mb-2 font-headline font-bold">What are you trying to achieve?</h2>
+                      <p className="text-on-surface-variant">Tell us in your own words. &quot;Get a job in AI&quot; or &quot;figure out what I want to do&quot; — both are valid.</p>
                     </div>
-
-                    <textarea
-                      value={form.currentGoal}
-                      onChange={(e) => update("currentGoal", e.target.value)}
+                    <textarea value={form.currentGoal} onChange={(e) => update("currentGoal", e.target.value)}
                       placeholder="e.g. I want to land my first developer job within 6 months while keeping my sanity intact"
-                      rows={4}
-                      className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant/15 rounded-xl text-on-surface placeholder:text-outline focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/10 transition-all resize-none"
-                    />
-
+                      rows={4} className={`${inputCls} resize-none`} />
                     <div className="p-4 bg-primary/5 border border-primary/10 rounded-xl">
                       <p className="text-sm text-on-surface-variant">
-                        <span className="font-bold text-primary">Quick tip:</span> The more specific you are, the more useful your roadmap will be. &quot;Learn React&quot; is good, &quot;Build a portfolio site with React and get hired as a junior frontend dev&quot; is better.
+                        <span className="font-bold text-primary">Quick tip:</span> The more specific you are, the more useful your roadmap will be.
                       </p>
                     </div>
                   </div>
@@ -539,7 +499,6 @@ export default function OnboardingFlow() {
               </motion.div>
             </AnimatePresence>
 
-            {/* Error */}
             {error && (
               <div className="mt-6 p-4 bg-error-container/20 border border-error/20 rounded-xl">
                 <p className="text-sm text-error font-medium">{error}</p>
@@ -548,36 +507,18 @@ export default function OnboardingFlow() {
 
             {/* Navigation */}
             <div className="flex items-center justify-between mt-10 pt-8 border-t border-outline-variant/10">
-              <button
-                onClick={back}
-                disabled={step === 0}
-                className="flex items-center gap-2 text-sm font-label font-semibold text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest disabled:opacity-30"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back
+              <button onClick={back} disabled={step === 0}
+                className="flex items-center gap-2 text-sm font-headline font-bold text-on-surface-variant hover:text-on-surface transition-colors uppercase tracking-widest disabled:opacity-30">
+                <ArrowLeft className="w-4 h-4" />Back
               </button>
-
-              <button
-                onClick={next}
-                disabled={!canProceed() || loading}
-                className="flex items-center gap-3 bg-gradient-to-r from-primary to-primary-container text-on-primary font-label text-sm font-extrabold py-4 px-10 rounded-xl shadow-xl hover:shadow-primary/20 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Analyzing...
-                  </>
-                ) : step < STEPS.length - 1 ? (
-                  <>
-                    Continue
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                ) : (
-                  <>
-                    Generate My Roadmap
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+              <button onClick={next} disabled={!canProceed() || loading}
+                className="relative overflow-hidden flex items-center gap-3 font-headline font-bold text-sm py-3.5 px-8 rounded-full bg-white text-surface group/fill disabled:opacity-50 disabled:cursor-not-allowed transition-all">
+                <span className="absolute inset-0 z-0 bg-gradient-to-r from-primary to-primary-container rounded-[inherit] translate-y-full group-hover/fill:translate-y-0 transition-transform duration-500 ease-out" />
+                <span className="relative z-10 flex items-center gap-3 transition-colors duration-150 group-hover/fill:text-white">
+                  {loading ? (<><Loader2 className="w-4 h-4 animate-spin" />Analyzing...</>)
+                    : step < STEPS.length - 1 ? (<>Continue<ArrowRight className="w-4 h-4" /></>)
+                    : (<>Generate My Roadmap<ArrowRight className="w-4 h-4" /></>)}
+                </span>
               </button>
             </div>
           </div>

@@ -1,246 +1,198 @@
-import type { AnalysisResponse, CheckInResponse } from "@/types";
+import type { AnalysisResponse, CheckInResponse, UserProfile, CareerMatch } from "@/types";
 
-/**
- * Mock response seeded for the "Bob" scenario:
- * Fresh CS graduate, knows JS/Python/Java/C++, interested in AI/Data/SWE,
- * doing 9-5 traineeship + courses, feeling stuck.
- */
-export const MOCK_ANALYSIS: AnalysisResponse = {
-  user_summary: {
-    name: "Bob",
-    education: "Bachelor's in Computer Science",
-    current_status: "Recent Graduate",
-  },
-  career_matches: [
-    {
-      title: "Software Engineer",
-      fit_reason:
-        "Your programming foundation across multiple languages is strong. Software engineering offers the most direct path given your current skills — you can start contributing quickly while building depth.",
-      difficulty: "Medium",
-      growth: "High",
-      stress_level: "Medium",
-      starting_role: "Junior Developer / Trainee",
-      progression: [
-        "Trainee / Intern",
-        "Junior Developer",
-        "Mid-level Developer",
-        "Senior Developer",
-        "Staff Engineer / Engineering Manager",
-      ],
-      estimated_timeline: {
-        to_first_role: "0-3 months",
-        to_mid_level: "2-3 years",
-        to_senior: "4-6 years",
-      },
-    },
-    {
-      title: "Data Scientist / ML Engineer",
-      fit_reason:
-        "Your interest in AI and data combined with Python and problem-solving skills makes this a natural fit. The learning curve is steeper, but the growth ceiling is high and the field is expanding fast.",
-      difficulty: "Hard",
-      growth: "High",
-      stress_level: "Medium",
-      starting_role: "Junior Data Analyst / ML Intern",
-      progression: [
-        "Data Analyst",
-        "Junior Data Scientist",
-        "Data Scientist",
-        "Senior Data Scientist",
-        "ML Lead / Principal Scientist",
-      ],
-      estimated_timeline: {
-        to_first_role: "3-6 months",
-        to_mid_level: "2-4 years",
-        to_senior: "5-7 years",
-      },
-    },
-    {
-      title: "Backend / API Engineer",
-      fit_reason:
-        "With Java, Python, and JS in your toolkit, backend engineering is a low-friction entry point. It pairs well with your problem-solving mindset and can eventually branch into distributed systems or platform work.",
-      difficulty: "Medium",
-      growth: "High",
-      stress_level: "Low",
-      starting_role: "Junior Backend Developer",
-      progression: [
-        "Junior Backend Developer",
-        "Backend Developer",
-        "Senior Backend Engineer",
-        "Principal Engineer / Architect",
-      ],
-      estimated_timeline: {
-        to_first_role: "0-2 months",
-        to_mid_level: "2-3 years",
-        to_senior: "4-6 years",
-      },
-    },
-  ],
-  roadmap: {
-    current_stage: "Entry-level learner with traineeship experience",
-    next_30_days: [
-      {
-        title: "Lock in your primary track",
-        description:
-          "Pick one career path as your main focus. You can always pivot later, but scattered effort now will slow you down.",
-        duration: "Week 1",
-        tasks: [
-          "Research day-in-the-life content for your top 2 paths",
-          "Talk to 2 people already working in those roles",
-          "Pick one path and commit for the next 3 months",
-        ],
-      },
-      {
-        title: "Build your first project",
-        description:
-          "Nothing beats learning by doing. Start a small project that demonstrates the skills employers are looking for.",
-        duration: "Weeks 2-4",
-        tasks: [
-          "Choose a project idea (portfolio site, API, data dashboard)",
-          "Set up GitHub repo with clean README",
-          "Ship a working v1 by end of month",
-          "Write a brief case study of what you built and why",
-        ],
-      },
-    ],
-    next_3_months: [
-      {
-        title: "Deepen core skills",
-        description:
-          "Go beyond tutorials. Build real things, contribute to open source, or pick up a meaningful side project.",
-        duration: "Months 1-3",
-        tasks: [
-          "Complete one focused online course (not 5 half-finished ones)",
-          "Build 2 portfolio projects that solve real problems",
-          "Start writing about what you learn (blog, Twitter, LinkedIn)",
-          "Apply to 10-15 relevant positions per month",
-        ],
-      },
-    ],
-    next_6_months: [
-      {
-        title: "Establish professional presence",
-        description:
-          "Your portfolio and network are your resume. Focus on visibility and credibility.",
-        duration: "Months 3-6",
-        tasks: [
-          "Have 3+ polished portfolio projects on GitHub",
-          "Optimize LinkedIn with keywords for target roles",
-          "Attend 2-3 meetups or virtual events in your field",
-          "Practice system design or data interviews weekly",
-        ],
-      },
-    ],
-    next_12_months: [
-      {
-        title: "Level up and specialize",
-        description:
-          "By now you should be in a role or close. Start specializing in a niche that excites you.",
-        duration: "Months 6-12",
-        tasks: [
-          "Identify a specialization (e.g., ML ops, distributed systems, data pipelines)",
-          "Lead a feature or small project at work",
-          "Mentor someone newer than you — teaching accelerates mastery",
-          "Plan your 2-year trajectory",
-        ],
-      },
-    ],
-  },
-  burnout: {
-    stress_level: "High",
-    burnout_risk: "Medium",
-    risk_window: "4-8 weeks if workload continues unchanged",
-    reasons: [
-      "Combining a 9-to-5 traineeship with self-study courses leaves very little recovery time",
-      "Feeling stuck often comes from doing too many things at once without clear progress markers",
-      "No clear boundary between work-learning and personal-learning creates an always-on mindset",
-    ],
-    recommendations: [
-      "Set a hard stop time for study each day — even 30 minutes of true rest matters",
-      "Focus on ONE course or project at a time instead of juggling several",
-      "Schedule at least one full day per week with zero career-related activity",
-      "Move your body daily — even a 20-minute walk reduces cognitive fatigue",
-      "Track your wins weekly — you are making progress even when it does not feel like it",
-    ],
-  },
-  resources: [
-    {
-      title: "CS50's Web Programming with Python and JavaScript",
-      type: "course",
-      reason:
-        "A rigorous but practical course that bridges your CS fundamentals with real web development",
-      url: "https://cs50.harvard.edu/web/",
-    },
-    {
-      title: "Build a Full Stack App with Next.js",
-      type: "youtube",
-      reason: "Hands-on project tutorial that adds a real project to your portfolio",
-      url: "https://youtube.com/watch?v=example-nextjs",
-    },
-    {
-      title: "Designing Machine Learning Systems (Chip Huyen)",
-      type: "article",
-      reason: "Great overview of ML engineering if you want to explore the data/AI path",
-      url: "https://huyenchip.com/machine-learning-systems-design/",
-    },
-    {
-      title: "Python Data Science Handbook",
-      type: "docs",
-      reason: "Free online reference for pandas, matplotlib, and scikit-learn",
-      url: "https://jakevdp.github.io/PythonDataScienceHandbook/",
-    },
-    {
-      title: "Build a REST API from Scratch",
-      type: "project",
-      reason: "Perfect portfolio project that demonstrates backend skills employers look for",
-      url: "https://example.com/rest-api-project",
-    },
-    {
-      title: "The Missing Semester of Your CS Education",
-      type: "course",
-      reason: "Covers shell, Git, debugging, and dev tools that CS degrees skip but jobs require",
-      url: "https://missing.csail.mit.edu/",
-    },
-  ],
-};
+// ============================================================
+// CAREER POOL — covers tech, business, science, arts, etc.
+// Each career has: tags (skills/interests), degreeFields it fits, and the career data
+// ============================================================
 
-export const MOCK_CHECKIN_RESPONSE: CheckInResponse = {
-  acknowledgment:
-    "It makes total sense that you are feeling this way. Juggling a traineeship and self-study is genuinely hard, and feeling stuck does not mean you are failing — it usually means you are at a plateau, which is a normal part of learning.",
-  insight:
-    "The fastest way through a plateau is to ship something small. Instead of consuming more content, try building one tiny thing this week that you can show someone.",
-  updated_recommendations: [
-    "Pause all courses for one week and build a small project instead",
-    "Write down 3 things you have learned in the past month — you know more than you think",
-    "Reduce study to 1 hour per weekday and take weekends fully off",
-    "Apply to 3 positions this week — even if you feel 'not ready'",
-    "Talk to one person in your target field — a real conversation beats 10 tutorials",
-  ],
-  updated_burnout: {
-    stress_level: "High",
-    burnout_risk: "Medium",
-    risk_window: "4-6 weeks at current pace",
-    reasons: [
-      "Still feeling stuck suggests the current study approach is not clicking",
-      "High effort without visible progress is a classic burnout accelerator",
-    ],
-    recommendations: [
-      "Switch from passive learning to active building",
-      "Set one clear weekly goal instead of a vague monthly one",
-      "Celebrate small wins — they compound",
-    ],
-  },
-  suggested_resources: [
-    {
-      title: "How to Escape Tutorial Hell",
-      type: "youtube",
-      reason: "Addresses exactly the pattern you might be in right now",
-      url: "https://youtube.com/watch?v=example-tutorial-hell",
+interface CareerTemplate {
+  tags: string[];
+  degreeFields: string[];
+  career: Omit<CareerMatch, "fit_reason"> & { fitTemplate: string };
+}
+
+const CAREER_POOL: CareerTemplate[] = [
+  // --- TECH ---
+  { tags: ["javascript", "react", "html/css", "typescript", "node.js", "web development", "frontend"], degreeFields: ["computer_science", "it", "engineering"],
+    career: { title: "Frontend Developer", fitTemplate: "Your skills in {skills} combined with your interest in {interests} make frontend development a strong fit.", difficulty: "Medium", growth: "High", stress_level: "Medium", starting_role: "Junior Frontend Developer", progression: ["Junior Frontend Dev", "Frontend Developer", "Senior Frontend Dev", "Lead Frontend Engineer", "Principal Engineer"], estimated_timeline: { to_first_role: "1-3 months", to_mid_level: "2-3 years", to_senior: "4-6 years" } } },
+  { tags: ["python", "machine learning", "ai", "data science", "data analysis", "ai / machine learning", "statistics"], degreeFields: ["computer_science", "it", "science", "engineering"],
+    career: { title: "Data Scientist / ML Engineer", fitTemplate: "Your background in {education} combined with skills in {skills} positions you well for data science and machine learning.", difficulty: "Hard", growth: "High", stress_level: "Medium", starting_role: "Junior Data Analyst", progression: ["Data Analyst", "Junior Data Scientist", "Data Scientist", "Senior Data Scientist", "ML Lead / Principal"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "2-4 years", to_senior: "5-7 years" } } },
+  { tags: ["java", "python", "node.js", "sql", "git", "backend", "cloud computing", "devops", "c++"], degreeFields: ["computer_science", "it", "engineering"],
+    career: { title: "Backend Engineer", fitTemplate: "With {skills} in your toolkit, backend engineering leverages your problem-solving abilities and offers steady career growth.", difficulty: "Medium", growth: "High", stress_level: "Low", starting_role: "Junior Backend Developer", progression: ["Junior Backend Dev", "Backend Developer", "Senior Backend Engineer", "Staff Engineer", "Principal Architect"], estimated_timeline: { to_first_role: "1-2 months", to_mid_level: "2-3 years", to_senior: "4-6 years" } } },
+  { tags: ["mobile apps", "react", "swift", "kotlin", "flutter", "game development"], degreeFields: ["computer_science", "it", "engineering"],
+    career: { title: "Mobile App Developer", fitTemplate: "Your interest in {interests} translates directly to mobile development where demand continues to grow.", difficulty: "Medium", growth: "High", stress_level: "Medium", starting_role: "Junior Mobile Developer", progression: ["Junior Mobile Dev", "Mobile Developer", "Senior Mobile Dev", "Mobile Lead", "Mobile Architect"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "2-3 years", to_senior: "4-6 years" } } },
+  { tags: ["cybersecurity", "networking", "linux", "security"], degreeFields: ["computer_science", "it", "engineering"],
+    career: { title: "Cybersecurity Analyst", fitTemplate: "Your interest in {interests} combined with your technical foundation opens doors in the high-demand cybersecurity field.", difficulty: "Hard", growth: "High", stress_level: "Medium", starting_role: "Junior Security Analyst", progression: ["Security Intern", "Security Analyst", "Senior Security Engineer", "Security Architect", "CISO"], estimated_timeline: { to_first_role: "3-6 months", to_mid_level: "3-4 years", to_senior: "6-8 years" } } },
+  { tags: ["cloud computing", "devops", "docker", "kubernetes", "aws", "linux"], degreeFields: ["computer_science", "it", "engineering"],
+    career: { title: "Cloud / DevOps Engineer", fitTemplate: "Your interest in {interests} and technical skills make cloud/DevOps engineering a high-growth path with excellent pay.", difficulty: "Medium", growth: "High", stress_level: "Medium", starting_role: "Junior DevOps Engineer", progression: ["Junior DevOps", "DevOps Engineer", "Senior DevOps", "Platform Lead", "VP Infrastructure"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "2-3 years", to_senior: "5-7 years" } } },
+  { tags: ["design", "ux design", "figma", "ui", "ux research", "adobe"], degreeFields: ["computer_science", "it", "arts", "other"],
+    career: { title: "UX/UI Designer", fitTemplate: "Your creative skills in {skills} paired with interest in {interests} make UX/UI design a compelling career path.", difficulty: "Medium", growth: "High", stress_level: "Low", starting_role: "Junior UX Designer", progression: ["UX Intern", "Junior Designer", "UX Designer", "Senior Designer", "Head of Design"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "2-3 years", to_senior: "5-7 years" } } },
+  { tags: ["blockchain", "solidity", "web3", "cryptocurrency"], degreeFields: ["computer_science", "it", "engineering"],
+    career: { title: "Blockchain Developer", fitTemplate: "Your technical skills combined with interest in {interests} position you for Web3 development.", difficulty: "Hard", growth: "High", stress_level: "High", starting_role: "Junior Smart Contract Dev", progression: ["Junior Web3 Dev", "Blockchain Developer", "Senior Blockchain Engineer", "Protocol Lead"], estimated_timeline: { to_first_role: "3-6 months", to_mid_level: "2-3 years", to_senior: "4-6 years" } } },
+  // --- BUSINESS / MANAGEMENT ---
+  { tags: ["product management", "communication", "leadership", "strategy", "problem solving"], degreeFields: ["management", "commerce", "computer_science", "it"],
+    career: { title: "Product Manager", fitTemplate: "Your {skills} skills combined with {education} background make product management a strong leadership-track career.", difficulty: "Medium", growth: "High", stress_level: "Medium", starting_role: "Associate Product Manager", progression: ["Associate PM", "Product Manager", "Senior PM", "Director of Product", "VP of Product"], estimated_timeline: { to_first_role: "3-6 months", to_mid_level: "2-4 years", to_senior: "5-8 years" } } },
+  { tags: ["marketing", "digital marketing", "social media", "content", "seo", "analytics"], degreeFields: ["management", "commerce", "arts", "other"],
+    career: { title: "Digital Marketing Manager", fitTemplate: "Your interest in {interests} and {skills} skills align well with digital marketing, a field with diverse creative and analytical opportunities.", difficulty: "Easy", growth: "Medium", stress_level: "Medium", starting_role: "Marketing Intern", progression: ["Marketing Intern", "Marketing Coordinator", "Marketing Manager", "Senior Marketing Manager", "Head of Marketing"], estimated_timeline: { to_first_role: "1-2 months", to_mid_level: "2-3 years", to_senior: "5-7 years" } } },
+  { tags: ["finance", "accounting", "excel", "financial analysis", "banking"], degreeFields: ["commerce", "management", "science"],
+    career: { title: "Financial Analyst", fitTemplate: "Your {education} background combined with {skills} skills makes financial analysis a strong career with clear progression.", difficulty: "Medium", growth: "Medium", stress_level: "High", starting_role: "Junior Financial Analyst", progression: ["Junior Analyst", "Financial Analyst", "Senior Analyst", "Finance Manager", "CFO"], estimated_timeline: { to_first_role: "1-3 months", to_mid_level: "3-4 years", to_senior: "7-10 years" } } },
+  { tags: ["consulting", "problem solving", "communication", "strategy", "analysis"], degreeFields: ["management", "commerce", "engineering", "science"],
+    career: { title: "Management Consultant", fitTemplate: "Your analytical {skills} skills and {education} background are exactly what top consulting firms look for.", difficulty: "Hard", growth: "High", stress_level: "High", starting_role: "Junior Consultant", progression: ["Analyst", "Consultant", "Senior Consultant", "Manager", "Partner"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "3-5 years", to_senior: "8-12 years" } } },
+  { tags: ["hr", "recruitment", "people management", "communication", "leadership"], degreeFields: ["management", "arts", "commerce", "other"],
+    career: { title: "HR Manager", fitTemplate: "Your {skills} skills and interest in people management make HR a rewarding career path.", difficulty: "Easy", growth: "Medium", stress_level: "Low", starting_role: "HR Coordinator", progression: ["HR Coordinator", "HR Generalist", "HR Manager", "Senior HR Manager", "VP of People"], estimated_timeline: { to_first_role: "1-2 months", to_mid_level: "3-4 years", to_senior: "6-8 years" } } },
+  // --- SCIENCE / BIOLOGY ---
+  { tags: ["research", "biology", "lab", "chemistry", "biotech", "healthcare"], degreeFields: ["biology", "science"],
+    career: { title: "Biotech Research Scientist", fitTemplate: "Your {education} background and skills in {skills} directly apply to biotech research.", difficulty: "Hard", growth: "High", stress_level: "Medium", starting_role: "Research Assistant", progression: ["Research Assistant", "Junior Scientist", "Research Scientist", "Senior Scientist", "Principal Investigator"], estimated_timeline: { to_first_role: "1-3 months", to_mid_level: "3-5 years", to_senior: "7-10 years" } } },
+  { tags: ["healthcare", "biology", "patient care", "medicine", "public health"], degreeFields: ["biology", "science"],
+    career: { title: "Healthcare Administrator", fitTemplate: "Your {education} foundation combined with interest in {interests} opens doors in healthcare management.", difficulty: "Medium", growth: "High", stress_level: "Medium", starting_role: "Healthcare Coordinator", progression: ["Coordinator", "Administrator", "Senior Administrator", "Director", "VP of Operations"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "3-5 years", to_senior: "7-10 years" } } },
+  { tags: ["environmental", "sustainability", "science", "research", "data analysis"], degreeFields: ["science", "biology", "engineering"],
+    career: { title: "Environmental Scientist", fitTemplate: "Your {skills} skills and {education} background align with the growing field of environmental science.", difficulty: "Medium", growth: "Medium", stress_level: "Low", starting_role: "Junior Environmental Analyst", progression: ["Junior Analyst", "Environmental Scientist", "Senior Scientist", "Lead Researcher", "Director"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "3-5 years", to_senior: "7-10 years" } } },
+  // --- ARTS ---
+  { tags: ["writing", "content", "creative writing", "journalism", "editing", "communication"], degreeFields: ["arts", "other"],
+    career: { title: "Content Strategist / Writer", fitTemplate: "Your {skills} skills and creative background make content strategy a natural fit with growing demand.", difficulty: "Easy", growth: "Medium", stress_level: "Low", starting_role: "Junior Content Writer", progression: ["Junior Writer", "Content Writer", "Senior Writer", "Content Strategist", "Head of Content"], estimated_timeline: { to_first_role: "1-2 months", to_mid_level: "2-3 years", to_senior: "4-6 years" } } },
+  { tags: ["photography", "video", "film", "media", "creative", "design"], degreeFields: ["arts", "other"],
+    career: { title: "Creative Director / Media Producer", fitTemplate: "Your creative talents in {skills} and passion for {interests} open doors to media production.", difficulty: "Medium", growth: "Medium", stress_level: "Medium", starting_role: "Junior Creative", progression: ["Junior Creative", "Designer/Editor", "Senior Creative", "Art Director", "Creative Director"], estimated_timeline: { to_first_role: "2-4 months", to_mid_level: "3-4 years", to_senior: "6-8 years" } } },
+  // --- ENGINEERING (non-software) ---
+  { tags: ["mechanical", "manufacturing", "cad", "design", "engineering", "physics"], degreeFields: ["engineering", "science"],
+    career: { title: "Mechanical / Industrial Engineer", fitTemplate: "Your {education} background and {skills} skills are the foundation of engineering careers with excellent stability.", difficulty: "Medium", growth: "Medium", stress_level: "Medium", starting_role: "Junior Engineer", progression: ["Junior Engineer", "Engineer", "Senior Engineer", "Lead Engineer", "Engineering Director"], estimated_timeline: { to_first_role: "1-3 months", to_mid_level: "3-5 years", to_senior: "7-10 years" } } },
+  { tags: ["civil", "construction", "architecture", "surveying", "structural"], degreeFields: ["engineering"],
+    career: { title: "Civil / Structural Engineer", fitTemplate: "Your {education} degree directly qualifies you for civil engineering roles with strong job security.", difficulty: "Medium", growth: "Medium", stress_level: "Medium", starting_role: "Graduate Engineer", progression: ["Graduate Engineer", "Site Engineer", "Senior Engineer", "Project Manager", "Director"], estimated_timeline: { to_first_role: "0-2 months", to_mid_level: "3-5 years", to_senior: "7-10 years" } } },
+];
+
+// ============================================================
+// GENERATE PERSONALIZED MOCK ANALYSIS
+// ============================================================
+
+export function generateMockAnalysis(profile: UserProfile): AnalysisResponse {
+  const skills = profile.skills.map((s) => s.toLowerCase());
+  const interests = profile.interests.map((i) => i.toLowerCase());
+  const degreeField = profile.degreeField || "other";
+
+  // Score each career
+  const scored = CAREER_POOL.map((cp) => {
+    let score = 0;
+    // Skill matching (strongest signal)
+    cp.tags.forEach((tag) => {
+      if (skills.some((s) => s.includes(tag) || tag.includes(s))) score += 3;
+    });
+    // Interest matching
+    cp.tags.forEach((tag) => {
+      if (interests.some((i) => i.includes(tag) || tag.includes(i))) score += 2;
+    });
+    // Degree field matching
+    if (cp.degreeFields.includes(degreeField)) score += 4;
+    // Education text matching
+    const edu = profile.education.toLowerCase();
+    cp.tags.forEach((tag) => { if (edu.includes(tag)) score += 1; });
+    return { ...cp, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored.filter((c) => c.score > 0).slice(0, 5);
+  while (top.length < 3) {
+    const next = scored.find((c) => !top.includes(c));
+    if (next) top.push(next); else break;
+  }
+
+  const careers: CareerMatch[] = top.map((c) => {
+    const matchedSkills = profile.skills.filter((s) => c.tags.some((t) => s.toLowerCase().includes(t) || t.includes(s.toLowerCase())));
+    const matchedInterests = profile.interests.filter((i) => c.tags.some((t) => i.toLowerCase().includes(t) || t.includes(i.toLowerCase())));
+    return {
+      ...c.career,
+      fit_reason: c.career.fitTemplate
+        .replace("{skills}", matchedSkills.length > 0 ? matchedSkills.join(", ") : profile.skills.slice(0, 2).join(", ") || "your skills")
+        .replace("{interests}", matchedInterests.length > 0 ? matchedInterests.join(", ") : profile.interests[0] || "your interests")
+        .replace("{education}", profile.education),
+    };
+  });
+
+  const topTitle = careers[0]?.title || "your chosen field";
+  const totalHours = profile.weeklyWorkHours + profile.weeklyStudyHours;
+  const burnoutLevel = totalHours >= 55 ? "High" : totalHours >= 35 ? "Medium" : "Low";
+  const burnoutRisk = profile.emotionalState === "burned_out" || profile.emotionalState === "overwhelmed" ? "High"
+    : totalHours >= 50 || profile.sleepQuality === "poor" ? "Medium" : "Low";
+
+  return {
+    user_summary: { name: profile.name, education: profile.education, current_status: profile.currentStatus.replace("_", " ") },
+    career_matches: careers,
+    roadmap: {
+      current_stage: `${profile.currentStatus.replace("_", " ")} exploring ${topTitle}`,
+      next_30_days: [
+        { title: `Focus on ${topTitle} fundamentals`, description: `Leverage your ${profile.skills.slice(0, 2).join(", ")} skills to build a foundation. Start with hands-on projects.`, duration: "Weeks 1-2", tasks: [`Research what ${topTitle} roles require`, `Start a small project using ${profile.skills[0] || "your primary skill"}`, "Set up a portfolio or GitHub"] },
+        { title: "Build your first project", description: "Ship something small but complete.", duration: "Weeks 3-4", tasks: [`Build a project combining ${profile.skills.slice(0, 2).join(" and ")}`, "Write a case study", "Get feedback from someone in the field"] },
+      ],
+      next_3_months: [{ title: `Deepen ${profile.skills[0] || "core"} expertise`, description: `Go beyond basics in ${topTitle}.`, duration: "Months 1-3", tasks: ["Complete one focused course", "Build 2 portfolio projects", "Connect with 5 professionals", "Apply to 10+ positions"] }],
+      next_6_months: [{ title: "Establish credibility", description: "Portfolio and network are your resume.", duration: "Months 3-6", tasks: ["3+ polished projects", "Attend meetups", `Practice ${topTitle} interviews weekly`] }],
+      next_12_months: [{ title: "Specialize and level up", description: `Find your niche within ${topTitle}.`, duration: "Months 6-12", tasks: ["Pick a specialization", "Lead a project at work", "Mentor someone newer"] }],
     },
-    {
-      title: "Build Something, Not Everything",
-      type: "article",
-      reason: "Short read on focused project-based learning",
-      url: "https://example.com/focused-learning",
+    burnout: {
+      stress_level: burnoutLevel as "Low" | "Medium" | "High", burnout_risk: burnoutRisk as "Low" | "Medium" | "High",
+      risk_window: burnoutRisk === "High" ? "2-4 weeks" : burnoutRisk === "Medium" ? "6-8 weeks" : "Sustainable",
+      reasons: [`${totalHours}h/week total workload`, `Sleep: ${profile.sleepQuality}`, `Mood: ${profile.emotionalState.replace("_", " ")}`],
+      recommendations: ["Set a hard stop time daily", "ONE course/project at a time", "One full rest day per week", "20-min daily walk", "Track wins weekly"],
     },
-  ],
-};
+    resources: [
+      { title: `Getting started with ${topTitle}`, type: "course", reason: "Directly relevant", url: "https://example.com/start" },
+      { title: `${profile.skills[0] || "Core"} project ideas`, type: "project", reason: "Build your portfolio", url: "https://example.com/projects" },
+      { title: `${topTitle} career guide`, type: "article", reason: "Full roadmap overview", url: "https://example.com/guide" },
+      { title: `${profile.skills[0] || "Skill"} deep dive`, type: "youtube", reason: "Strengthen primary skill", url: "https://youtube.com/watch?v=example" },
+      { title: "Managing burnout", type: "article", reason: `Important at ${totalHours}h/week`, url: "https://example.com/burnout" },
+      { title: `${profile.interests[0] || "Industry"} community`, type: "docs", reason: "Network with others", url: "https://example.com/community" },
+    ],
+  };
+}
+
+// ============================================================
+// MOCK CHECK-IN RESPONSE
+// ============================================================
+
+export function generateMockCheckIn(profile: UserProfile, analysis: AnalysisResponse, message: string): CheckInResponse {
+  const msg = message.toLowerCase();
+  const topCareer = analysis.career_matches[0]?.title || "your career";
+  const totalHours = profile.weeklyWorkHours + profile.weeklyStudyHours;
+  const burnedOut = msg.includes("burn") || msg.includes("tired") || msg.includes("exhaust") || msg.includes("overwhelm");
+  const feelsStuck = msg.includes("stuck") || msg.includes("lost") || msg.includes("confused");
+  const wantsNext = msg.includes("next") || msg.includes("step") || msg.includes("focus") || msg.includes("what should");
+  const wantsCareer = msg.includes("switch") || msg.includes("change") || msg.includes("career") || msg.includes("suggestion") || msg.includes("path") || msg.includes("explore") || wantsNext;
+
+  let ack: string, insight: string, recs: string[];
+  if (burnedOut) {
+    ack = `I hear you, ${profile.name}. Working ${totalHours}h/week is genuinely exhausting. Feeling burned out means you've been pushing hard — not that you're failing.`;
+    insight = "Rest strategically. One week of recovery saves a month of diminished output.";
+    recs = ["Take 2-3 days off from study", `Reduce study hours from ${profile.weeklyStudyHours}h to ${Math.max(5, profile.weeklyStudyHours - 10)}h`, "Do something fun and non-career", "Sleep 8 hours for 5 nights straight", "Return to ONE thing at a time"];
+  } else if (feelsStuck) {
+    ack = `Feeling stuck is frustrating, ${profile.name}, but it's a normal plateau — a sign you've been learning.`;
+    insight = "The fastest way through: ship something small. Building beats consuming.";
+    recs = ["Pause courses for a week, build instead", "Write down 3 things you learned this month", `Apply to 3 ${topCareer} positions`, "Talk to someone in your target field", "Set tiny daily goals"];
+  } else if (wantsNext) {
+    ack = `Great question, ${profile.name}! Let me help you prioritize.`;
+    insight = `For ${topCareer}, build a project showing your ${profile.skills[0] || "core"} skills to employers.`;
+    recs = [`Build a portfolio project with ${profile.skills.slice(0, 2).join(" + ")}`, `Study job descriptions for ${topCareer}`, "Dedicate 2 weeks to one skill gap", "Update LinkedIn for target role", "Schedule 2 informational interviews"];
+  } else {
+    ack = `Thanks for checking in, ${profile.name}! Every step counts.`;
+    insight = `You're on a solid path toward ${topCareer}. Consistency beats intensity.`;
+    recs = ["Continue building with hands-on projects", "Review your roadmap", "Reach out to your network", "Celebrate a recent win"];
+  }
+
+  return {
+    acknowledgment: ack, insight,
+    updated_recommendations: recs,
+    updated_burnout: { stress_level: burnedOut ? "High" : "Medium", burnout_risk: burnedOut ? "High" : "Low", risk_window: burnedOut ? "2-4 weeks" : "Sustainable", reasons: [`${totalHours}h/week`], recommendations: burnedOut ? ["Reduce hours", "Sleep more"] : ["Stay consistent"] },
+    suggested_resources: [
+      { title: `${topCareer} guide`, type: "article", reason: "Relevant to your path", url: "https://example.com/guide" },
+      { title: "Developer burnout tips", type: "youtube", reason: "Manage your workload", url: "https://youtube.com/watch?v=example" },
+    ],
+    updated_career_matches: wantsCareer ? analysis.career_matches.slice(0, 3) : undefined,
+  };
+}
+
+// Backward compat exports
+export const MOCK_ANALYSIS: AnalysisResponse = generateMockAnalysis({
+  name: "User", email: "", education: "Bachelor's in Computer Science", educationLevel: "bachelors", degreeField: "computer_science",
+  currentStatus: "student", skills: ["JavaScript", "Python"], interests: ["Web Development"],
+  weeklyStudyHours: 10, weeklyWorkHours: 20, sleepQuality: "fair", emotionalState: "neutral", currentGoal: "Get a job", careerStage: "exploring",
+});
+export const MOCK_CHECKIN_RESPONSE: CheckInResponse = generateMockCheckIn(
+  { name: "User", email: "", education: "CS", educationLevel: "bachelors", degreeField: "computer_science", currentStatus: "student", skills: ["JavaScript"], interests: ["Web Development"], weeklyStudyHours: 10, weeklyWorkHours: 20, sleepQuality: "fair", emotionalState: "neutral", currentGoal: "Get a job", careerStage: "exploring" },
+  MOCK_ANALYSIS, "I feel stuck"
+);
