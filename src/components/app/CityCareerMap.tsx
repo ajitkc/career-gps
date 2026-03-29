@@ -297,28 +297,67 @@ export default function CityCareerMap({ careers, externalCareerIdx, externalTs }
     if (final.careerIdx >= 0) setPanelData({ node: final, career: careers[final.careerIdx] });
   }, [isMoving, carNodeId, checkpoint, adj, nodes, careers, edgeBeziers, panelData]);
 
-  const advanceCheckpoint = useCallback(() => {
+  const advanceCheckpoint = useCallback(async () => {
     store.setCareerCheckpoint(carNodeId);
     setSelectedPath(null);
 
-    // Update the user's profile and analysis to reflect the new career stage
     const node = nodes.get(carNodeId);
-    if (node && node.careerIdx >= 0 && store.analysis) {
-      const career = careers[node.careerIdx];
-      const stageMap: Record<number, string> = { 0: "intern", 1: "junior", 2: "mid", 3: "senior", 4: "lead" };
-      const newStage = stageMap[node.stageIdx] || "exploring";
-      const currentStageLabel = `${career.title} — ${node.label}`;
+    if (!node || node.careerIdx < 0 || !store.analysis || !store.profile) return;
 
-      // Update profile career stage
-      if (store.profile) {
-        store.setProfile({ ...store.profile, careerStage: newStage as import("@/types").CareerStage });
-      }
+    const career = careers[node.careerIdx];
+    const stageMap: Record<number, string> = { 0: "intern", 1: "junior", 2: "mid", 3: "senior", 4: "lead" };
+    const newStage = (stageMap[node.stageIdx] || "exploring") as import("@/types").CareerStage;
+    const currentStageLabel = `${career.title} — ${node.label}`;
 
-      // Update roadmap current_stage
-      store.setAnalysis({
-        ...store.analysis,
-        roadmap: { ...store.analysis.roadmap, current_stage: currentStageLabel },
-      });
+    // Update profile career stage
+    const updatedProfile = { ...store.profile, careerStage: newStage };
+    store.setProfile(updatedProfile);
+
+    // Regenerate analysis with updated roadmap stage and reordered careers
+    const reorderedCareers = [career, ...store.analysis.career_matches.filter((c) => c.title !== career.title)];
+
+    // Build updated roadmap tasks based on current stage
+    const stageIdx = node.stageIdx;
+    const nextRoles = career.progression.slice(stageIdx + 1);
+    const currentRole = node.label;
+
+    const updatedAnalysis = {
+      ...store.analysis,
+      career_matches: reorderedCareers,
+      roadmap: {
+        ...store.analysis.roadmap,
+        current_stage: currentStageLabel,
+        next_30_days: [
+          { title: `Excel as ${currentRole}`, description: `Focus on mastering your current role and building expertise in ${store.profile.skills.slice(0, 2).join(" and ") || "your core skills"}.`, duration: "Weeks 1-4", tasks: [`Deliver a key project as ${currentRole}`, "Get feedback from your manager/mentor", "Identify one skill gap to close this month"] },
+        ],
+        next_3_months: nextRoles.length > 0 ? [
+          { title: `Prepare for ${nextRoles[0]}`, description: `Start building skills needed for the next level.`, duration: "Months 1-3", tasks: [`Study what ${nextRoles[0]} roles require`, "Take on stretch assignments", "Expand your professional network"] },
+        ] : store.analysis.roadmap.next_3_months,
+      },
+    };
+
+    store.setAnalysis(updatedAnalysis);
+
+    // Recalculate burnout
+    const { calculateBurnoutScore } = await import("@/lib/burnout");
+    store.setBurnoutScore(calculateBurnoutScore(updatedProfile));
+
+    // Persist to Supabase
+    if (store.profileId) {
+      try {
+        await Promise.all([
+          fetch("/api/update-profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: store.profileId, profile: { currentStatus: newStage } }),
+          }),
+          fetch("/api/update-analysis", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
+          }),
+        ]);
+      } catch { /* silent */ }
     }
   }, [carNodeId, store, nodes, careers]);
 

@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { motion } from "framer-motion";
 import {
   AlertTriangle, Heart, Shield, Clock,
-  TrendingDown, Moon, Briefcase, GraduationCap, Brain,
+  TrendingDown, Moon, Briefcase, GraduationCap, Brain, Pencil, Check, X, Zap,
 } from "lucide-react";
 import { useStore } from "@/lib/store";
+import { calculateBurnoutScore } from "@/lib/burnout";
 
 const card = "bg-surface-container-high rounded-2xl p-6 border border-outline-variant/10";
 const cardStat = "bg-surface-container-high rounded-xl p-5 border border-outline-variant/10 text-center";
@@ -46,11 +48,57 @@ function TrafficRoad({ level }: { level: "low" | "medium" | "high" }) {
 }
 
 export default function BurnoutPage() {
-  const { profile, burnoutScore, analysis } = useStore();
+  const store = useStore();
+  const { profile, burnoutScore, analysis } = store;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<{ weeklyWorkHours: number; weeklyStudyHours: number; sleepQuality: "poor" | "fair" | "good" | "great"; emotionalState: import("@/types").EmotionalState }>({ weeklyWorkHours: 0, weeklyStudyHours: 0, sleepQuality: "fair", emotionalState: "neutral" });
+
   if (!profile || !burnoutScore || !analysis) return null;
 
   const burnout = analysis.burnout;
   const levelColor = burnoutScore.level === "low" ? "text-primary" : burnoutScore.level === "medium" ? "text-secondary" : "text-tertiary";
+  const topCareer = analysis.career_matches[0]?.title || "your career";
+
+  const startEdit = () => {
+    setDraft({ weeklyWorkHours: profile.weeklyWorkHours, weeklyStudyHours: profile.weeklyStudyHours, sleepQuality: profile.sleepQuality, emotionalState: profile.emotionalState });
+    setEditing(true);
+  };
+  const discard = () => setEditing(false);
+  const save = async () => {
+    const updated = { ...profile, ...draft };
+    store.setProfile(updated);
+    store.setBurnoutScore(calculateBurnoutScore(updated));
+    setEditing(false);
+    if (store.profileId) {
+      try {
+        await fetch("/api/update-profile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId: store.profileId, profile: draft }),
+        });
+      } catch { /* silent */ }
+    }
+  };
+
+  // Personalized next steps
+  const totalHours = profile.weeklyWorkHours + profile.weeklyStudyHours;
+  const nextSteps = [];
+  if (burnoutScore.level === "high") {
+    nextSteps.push("Immediately reduce your weekly hours by at least 10h");
+    nextSteps.push("Take 2-3 complete rest days this week");
+    nextSteps.push("Talk to someone you trust about how you're feeling");
+  } else if (burnoutScore.level === "medium") {
+    nextSteps.push("Set a hard stop time for study each day");
+    nextSteps.push("Schedule one full rest day per week");
+  }
+  if (profile.sleepQuality === "poor" || profile.sleepQuality === "fair") {
+    nextSteps.push(`Improve sleep: aim for 8 hours for 5 consecutive nights`);
+  }
+  if (totalHours >= 50) {
+    nextSteps.push(`Cut total weekly hours from ${totalHours}h to under 45h`);
+  }
+  nextSteps.push(`Focus on one ${topCareer} skill this week instead of many`);
+  nextSteps.push("20-minute daily walk — proven to reduce cognitive fatigue");
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
@@ -84,14 +132,74 @@ export default function BurnoutPage() {
         </motion.div>
       </div>
 
-      {/* Stats */}
+      {/* Editable Stats */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-        <div className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant mb-4">Your Stats</div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className={cardStat}><Briefcase className="w-5 h-5 text-primary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold">{profile.weeklyWorkHours}h</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Work / Week</div></div>
-          <div className={cardStat}><GraduationCap className="w-5 h-5 text-secondary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold">{profile.weeklyStudyHours}h</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Study / Week</div></div>
-          <div className={cardStat}><Moon className="w-5 h-5 text-tertiary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold capitalize">{profile.sleepQuality}</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Sleep Quality</div></div>
-          <div className={cardStat}><Brain className="w-5 h-5 text-primary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold capitalize">{profile.emotionalState.replace("_", " ")}</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Mood</div></div>
+        <div className={card}>
+          <div className="flex items-center gap-2 mb-4">
+            <Briefcase className="w-4 h-4 text-primary" />
+            <span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">Your Stats</span>
+            {!editing ? (
+              <button onClick={startEdit} className="ml-auto p-1 rounded-md hover:bg-surface-container transition-colors"><Pencil className="w-3.5 h-3.5 text-on-surface-variant" /></button>
+            ) : (
+              <div className="ml-auto flex gap-2">
+                <button onClick={discard} className="px-3 py-1.5 rounded-lg text-xs font-bold text-on-surface-variant border border-outline-variant/15 hover:bg-surface-container transition-all">Discard</button>
+                <button onClick={save} className="px-3 py-1.5 rounded-lg text-xs font-bold bg-primary text-on-primary hover:brightness-110 transition-all">Save</button>
+              </div>
+            )}
+          </div>
+
+          {!editing ? (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className={cardStat}><Briefcase className="w-5 h-5 text-primary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold">{profile.weeklyWorkHours}h</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Work / Week</div></div>
+              <div className={cardStat}><GraduationCap className="w-5 h-5 text-secondary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold">{profile.weeklyStudyHours}h</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Study / Week</div></div>
+              <div className={cardStat}><Moon className="w-5 h-5 text-tertiary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold capitalize">{profile.sleepQuality}</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Sleep</div></div>
+              <div className={cardStat}><Brain className="w-5 h-5 text-primary mx-auto mb-2" /><div className="font-headline text-2xl font-extrabold capitalize">{profile.emotionalState.replace("_", " ")}</div><div className="text-[10px] text-on-surface-variant uppercase tracking-widest mt-1">Mood</div></div>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div>
+                <div className="flex items-center justify-between mb-2"><label className="text-sm font-bold text-on-surface-variant flex items-center gap-2"><Briefcase className="w-3.5 h-3.5 text-primary" /> Work hours</label><span className="font-headline font-bold text-primary">{draft.weeklyWorkHours}h</span></div>
+                <input type="range" min={0} max={80} value={draft.weeklyWorkHours} onChange={(e) => setDraft((d) => ({ ...d, weeklyWorkHours: Number(e.target.value) }))} className="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-primary" />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2"><label className="text-sm font-bold text-on-surface-variant flex items-center gap-2"><GraduationCap className="w-3.5 h-3.5 text-secondary" /> Study hours</label><span className="font-headline font-bold text-secondary">{draft.weeklyStudyHours}h</span></div>
+                <input type="range" min={0} max={60} value={draft.weeklyStudyHours} onChange={(e) => setDraft((d) => ({ ...d, weeklyStudyHours: Number(e.target.value) }))} className="w-full h-2 bg-surface-container-highest rounded-lg appearance-none cursor-pointer accent-secondary" />
+              </div>
+              <div>
+                <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2"><Moon className="w-3.5 h-3.5 text-tertiary" /> Sleep quality</label>
+                <div className="grid grid-cols-4 gap-2 mt-2">
+                  {(["poor", "fair", "good", "great"] as const).map((q) => (
+                    <button key={q} type="button" onClick={() => setDraft((d) => ({ ...d, sleepQuality: q }))}
+                      className={`py-2.5 rounded-xl border text-xs font-bold capitalize transition-all ${draft.sleepQuality === q ? "border-primary/40 bg-primary/10 text-primary" : "border-outline-variant/15 text-on-surface-variant hover:bg-surface-container"}`}>{q}</button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-bold text-on-surface-variant mb-2 flex items-center gap-2"><Brain className="w-3.5 h-3.5 text-primary" /> Mood</label>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {(["motivated", "excited", "neutral", "anxious", "stuck", "overwhelmed", "burned_out"] as const).map((e) => (
+                    <button key={e} type="button" onClick={() => setDraft((d) => ({ ...d, emotionalState: e }))}
+                      className={`px-3 py-1.5 rounded-lg border text-xs font-bold capitalize transition-all ${draft.emotionalState === e ? "border-primary/40 bg-primary/10 text-primary" : "border-outline-variant/15 text-on-surface-variant hover:bg-surface-container"}`}>{e.replace("_", " ")}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Personalized Next Steps */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+        <div className={card}>
+          <div className="flex items-center gap-2 mb-4"><Zap className="w-4 h-4 text-primary" /><span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">What You Should Do Next</span></div>
+          <div className="space-y-2">
+            {nextSteps.map((step, i) => (
+              <div key={i} className="flex items-start gap-3 p-3 bg-surface-container/50 rounded-xl">
+                <div className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 mt-0.5"><span className="text-[10px] font-bold text-primary">{i + 1}</span></div>
+                <span className="text-sm text-on-surface-variant">{step}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </motion.div>
 
@@ -123,10 +231,9 @@ export default function BurnoutPage() {
             </ul>
           </div>
         </motion.div>
-
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
           <div className={`${card} h-full`}>
-            <div className="flex items-center gap-2 mb-4"><Shield className="w-4 h-4 text-primary" /><span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">What To Do About It</span></div>
+            <div className="flex items-center gap-2 mb-4"><Shield className="w-4 h-4 text-primary" /><span className="text-xs font-label font-bold uppercase tracking-widest text-on-surface-variant">Recovery Protocol</span></div>
             <div className="space-y-2">
               {burnout.recommendations.map((rec, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 bg-surface-container/50 rounded-xl"><Heart className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" /><span className="text-sm text-on-surface-variant">{rec}</span></div>
