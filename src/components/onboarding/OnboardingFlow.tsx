@@ -158,18 +158,26 @@ export default function OnboardingFlow() {
     setLoading(true);
     setError(null);
     try {
-      store.setProfile(form);
-      store.setBurnoutScore(calculateBurnoutScore(form));
+      // Ensure education is composed from dropdowns
+      const finalForm = { ...form };
+      if (!finalForm.education?.trim()) {
+        const lvl = EDU_LEVELS.find((l) => l.value === finalForm.educationLevel)?.label || finalForm.educationLevel;
+        const fld = DEGREE_FIELDS.find((d) => d.value === finalForm.degreeField)?.label || finalForm.degreeField;
+        finalForm.education = `${lvl} in ${fld}`;
+      }
+
+      store.setProfile(finalForm);
+      store.setBurnoutScore(calculateBurnoutScore(finalForm));
       const stageToLevel: Record<string, number> = {
         exploring: 0, student: 0, intern: 0, junior: 1, mid: 2, senior: 3, lead: 4,
       };
-      const level = stageToLevel[form.careerStage] ?? 0;
+      const level = stageToLevel[finalForm.careerStage] ?? 0;
       store.setCareerCheckpoint(`c0-s${level}`);
 
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, password }),
+        body: JSON.stringify({ ...finalForm, password }),
       });
 
       const data = await res.json();

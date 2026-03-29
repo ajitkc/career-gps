@@ -297,28 +297,71 @@ export default function CityCareerMap({ careers, externalCareerIdx, externalTs }
     if (final.careerIdx >= 0) setPanelData({ node: final, career: careers[final.careerIdx] });
   }, [isMoving, carNodeId, checkpoint, adj, nodes, careers, edgeBeziers, panelData]);
 
-  const advanceCheckpoint = useCallback(() => {
+  const advanceCheckpoint = useCallback(async () => {
     store.setCareerCheckpoint(carNodeId);
     setSelectedPath(null);
 
-    // Update the user's profile and analysis to reflect the new career stage
     const node = nodes.get(carNodeId);
-    if (node && node.careerIdx >= 0 && store.analysis) {
-      const career = careers[node.careerIdx];
-      const stageMap: Record<number, string> = { 0: "intern", 1: "junior", 2: "mid", 3: "senior", 4: "lead" };
-      const newStage = stageMap[node.stageIdx] || "exploring";
-      const currentStageLabel = `${career.title} — ${node.label}`;
+    if (!node || node.careerIdx < 0 || !store.analysis || !store.profile) return;
 
-      // Update profile career stage
-      if (store.profile) {
-        store.setProfile({ ...store.profile, careerStage: newStage as import("@/types").CareerStage });
-      }
+    const career = careers[node.careerIdx];
+    const stageMap: Record<number, string> = { 0: "intern", 1: "junior", 2: "mid", 3: "senior", 4: "lead" };
+    const newStage = (stageMap[node.stageIdx] || "exploring") as import("@/types").CareerStage;
+    const currentStageLabel = `${career.title} — ${node.label}`;
 
-      // Update roadmap current_stage
-      store.setAnalysis({
-        ...store.analysis,
-        roadmap: { ...store.analysis.roadmap, current_stage: currentStageLabel },
-      });
+    // Update profile career stage
+    const updatedProfile = { ...store.profile, careerStage: newStage };
+    store.setProfile(updatedProfile);
+
+    // Regenerate analysis with updated roadmap stage and reordered careers
+    const reorderedCareers = [career, ...store.analysis.career_matches.filter((c) => c.title !== career.title)];
+
+    // Build updated roadmap tasks based on current stage
+    const stageIdx = node.stageIdx;
+    const nextRoles = career.progression.slice(stageIdx + 1);
+    const currentRole = node.label;
+
+    // Regenerate resources for the new primary career
+    const { generateResources: genRes } = await import("@/data/mock-response");
+
+    const updatedAnalysis = {
+      ...store.analysis,
+      career_matches: reorderedCareers,
+      roadmap: {
+        ...store.analysis.roadmap,
+        current_stage: currentStageLabel,
+        next_30_days: [
+          { title: `Excel as ${currentRole}`, description: `Focus on mastering your current role and building expertise in ${store.profile.skills.slice(0, 2).join(" and ") || "your core skills"}.`, duration: "Weeks 1-4", tasks: [`Deliver a key project as ${currentRole}`, "Get feedback from your manager/mentor", "Identify one skill gap to close this month"] },
+        ],
+        next_3_months: nextRoles.length > 0 ? [
+          { title: `Prepare for ${nextRoles[0]}`, description: `Start building skills needed for the next level.`, duration: "Months 1-3", tasks: [`Study what ${nextRoles[0]} roles require`, "Take on stretch assignments", "Expand your professional network"] },
+        ] : store.analysis.roadmap.next_3_months,
+      },
+      resources: genRes(reorderedCareers, store.profile),
+    };
+
+    store.setAnalysis(updatedAnalysis);
+
+    // Recalculate burnout
+    const { calculateBurnoutScore } = await import("@/lib/burnout");
+    store.setBurnoutScore(calculateBurnoutScore(updatedProfile));
+
+    // Persist to Supabase
+    if (store.profileId) {
+      try {
+        await Promise.all([
+          fetch("/api/update-profile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: store.profileId, profile: { currentStatus: newStage } }),
+          }),
+          fetch("/api/update-analysis", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
+          }),
+        ]);
+      } catch { /* silent */ }
     }
   }, [carNodeId, store, nodes, careers]);
 
@@ -731,25 +774,52 @@ function PanelDrawer({ panelData, analysis, onClose }: { panelData: { node: MNod
   const isCurrentPath = analysis?.career_matches[0]?.title === career.title;
 
   const selectPath = async () => {
-    if (!analysis || !store.profileId) return;
+    if (!analysis || !store.profile) return;
     setSelecting(true);
-    // Move this career to the top of career_matches
+
+    // Reorder: selected career becomes index 0
     const reordered = [career, ...analysis.career_matches.filter((c) => c.title !== career.title)];
+
+    // Generate updated resources for the new top career
+    const { generateResources: genRes } = await import("@/data/mock-response");
+
+    // Build updated roadmap with career-specific tasks
+    const currentRole = node.label;
+    const nextRoles = career.progression.slice(node.stageIdx + 1);
+    const skills = store.profile.skills.slice(0, 2).join(" and ") || "your core skills";
+
     const updatedAnalysis = {
       ...analysis,
       career_matches: reordered,
-      roadmap: { ...analysis.roadmap, current_stage: `${career.title} — ${node.label}` },
+      roadmap: {
+        ...analysis.roadmap,
+        current_stage: `${career.title} — ${currentRole}`,
+        next_30_days: [
+          { title: `Excel as ${currentRole}`, description: `Build expertise in ${skills} for your ${career.title} track.`, duration: "Weeks 1-4", tasks: [`Deliver a project as ${currentRole}`, "Get feedback from a mentor", "Identify one skill gap to close"] },
+        ],
+        next_3_months: nextRoles.length > 0 ? [
+          { title: `Prepare for ${nextRoles[0]}`, description: `Start building skills for the next level in ${career.title}.`, duration: "Months 1-3", tasks: [`Study ${nextRoles[0]} requirements`, "Take on stretch assignments", "Expand your network in the field"] },
+        ] : analysis.roadmap.next_3_months,
+      },
+      resources: genRes(reordered, store.profile),
     };
+
     store.setAnalysis(updatedAnalysis);
+
+    // Set checkpoint: this career is now at index 0, so c0-s{stageIdx}
     store.setCareerCheckpoint(`c0-s${node.stageIdx}`);
+
     // Persist to DB
-    try {
-      await fetch("/api/update-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
-      });
-    } catch { /* silent */ }
+    if (store.profileId) {
+      try {
+        await fetch("/api/update-analysis", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profileId: store.profileId, analysis: updatedAnalysis }),
+        });
+      } catch { /* silent */ }
+    }
+
     setSelecting(false);
     onClose();
   };

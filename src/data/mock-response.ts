@@ -63,6 +63,106 @@ const CAREER_POOL: CareerTemplate[] = [
 // GENERATE PERSONALIZED MOCK ANALYSIS
 // ============================================================
 
+// ============================================================
+// CAREER-SPECIFIC RESOURCES
+// ============================================================
+
+const RESOURCE_MAP: Record<string, { title: string; type: "course" | "youtube" | "article" | "project" | "docs"; reason: string; url: string }[]> = {
+  "Frontend Developer": [
+    { title: "The Odin Project — Full Stack JavaScript", type: "course", reason: "Comprehensive free curriculum for frontend + full-stack", url: "https://www.theodinproject.com/" },
+    { title: "Build a Modern React App (Fireship)", type: "youtube", reason: "Quick practical React project walkthrough", url: "https://www.youtube.com/watch?v=Tn6-PIqc4UM" },
+    { title: "CSS Tricks — A Complete Guide to Flexbox", type: "article", reason: "Master CSS layout fundamentals", url: "https://css-tricks.com/snippets/css/a-guide-to-flexbox/" },
+    { title: "Build a Portfolio Website", type: "project", reason: "Your first portfolio piece for job applications", url: "https://github.com/topics/portfolio-website" },
+    { title: "MDN Web Docs — JavaScript", type: "docs", reason: "The definitive JS reference", url: "https://developer.mozilla.org/en-US/docs/Web/JavaScript" },
+  ],
+  "Backend Engineer": [
+    { title: "Node.js — The Complete Guide (Udemy)", type: "course", reason: "Deep dive into server-side JavaScript", url: "https://www.udemy.com/course/nodejs-the-complete-guide/" },
+    { title: "Build a REST API from Scratch", type: "project", reason: "Demonstrates backend skills employers look for", url: "https://github.com/topics/rest-api" },
+    { title: "System Design Primer", type: "article", reason: "Learn how to design scalable systems", url: "https://github.com/donnemartin/system-design-primer" },
+    { title: "Traversy Media — Express.js Crash Course", type: "youtube", reason: "Quick API framework tutorial", url: "https://www.youtube.com/watch?v=L72fhGm1tfE" },
+    { title: "PostgreSQL Documentation", type: "docs", reason: "Master your database", url: "https://www.postgresql.org/docs/" },
+  ],
+  "Data Scientist / ML Engineer": [
+    { title: "fast.ai — Practical Deep Learning", type: "course", reason: "Top-down approach to learning ML that works", url: "https://www.fast.ai/" },
+    { title: "Kaggle Learn — Intro to Machine Learning", type: "course", reason: "Hands-on ML with real datasets", url: "https://www.kaggle.com/learn/intro-to-machine-learning" },
+    { title: "3Blue1Brown — Neural Networks", type: "youtube", reason: "Best visual explanation of how neural nets work", url: "https://www.youtube.com/watch?v=aircAruvnKk" },
+    { title: "Build a Data Dashboard with Python", type: "project", reason: "Practical data viz project for your portfolio", url: "https://github.com/topics/data-dashboard" },
+    { title: "scikit-learn Documentation", type: "docs", reason: "Essential ML library reference", url: "https://scikit-learn.org/stable/documentation.html" },
+  ],
+  "UX/UI Designer": [
+    { title: "Google UX Design Certificate", type: "course", reason: "Industry-recognized UX credential", url: "https://grow.google/certificates/ux-design/" },
+    { title: "Figma Tutorial for Beginners", type: "youtube", reason: "Master the #1 design tool", url: "https://www.youtube.com/watch?v=FTFaQWZBqQ8" },
+    { title: "Laws of UX", type: "article", reason: "Core UX principles every designer should know", url: "https://lawsofux.com/" },
+    { title: "Redesign a Popular App", type: "project", reason: "Classic portfolio piece that shows your process", url: "https://uxdesign.cc/" },
+    { title: "Figma Community Resources", type: "docs", reason: "Free templates and design systems", url: "https://www.figma.com/community" },
+  ],
+  "Cybersecurity Analyst": [
+    { title: "TryHackMe — Complete Beginner Path", type: "course", reason: "Hands-on cybersecurity learning", url: "https://tryhackme.com/" },
+    { title: "CompTIA Security+ Study Guide", type: "article", reason: "Industry standard security certification", url: "https://www.comptia.org/certifications/security" },
+    { title: "NetworkChuck — Ethical Hacking", type: "youtube", reason: "Engaging intro to penetration testing", url: "https://www.youtube.com/c/NetworkChuck" },
+    { title: "Build a Home Security Lab", type: "project", reason: "Practice in a safe environment", url: "https://github.com/topics/security-lab" },
+    { title: "OWASP Top 10", type: "docs", reason: "Must-know web security vulnerabilities", url: "https://owasp.org/www-project-top-ten/" },
+  ],
+  "Digital Marketing Manager": [
+    { title: "Google Digital Marketing Certificate", type: "course", reason: "Free certification from Google", url: "https://grow.google/certificates/digital-marketing-ecommerce/" },
+    { title: "HubSpot Marketing Blog", type: "article", reason: "Stay current on marketing trends", url: "https://blog.hubspot.com/marketing" },
+    { title: "Neil Patel — SEO Tutorial", type: "youtube", reason: "Learn SEO from a top practitioner", url: "https://www.youtube.com/user/neaborncreative" },
+    { title: "Create a Social Media Campaign", type: "project", reason: "Hands-on marketing portfolio piece", url: "https://blog.hootsuite.com/" },
+    { title: "Google Analytics Academy", type: "docs", reason: "Master analytics — essential for any marketer", url: "https://analytics.google.com/analytics/academy/" },
+  ],
+  "Product Manager": [
+    { title: "Product School — Free PM Course", type: "course", reason: "Intro to product management fundamentals", url: "https://productschool.com/" },
+    { title: "Lenny's Newsletter", type: "article", reason: "Top PM newsletter with actionable advice", url: "https://www.lennysnewsletter.com/" },
+    { title: "How to Get Into Product Management", type: "youtube", reason: "Realistic career transition advice", url: "https://www.youtube.com/results?search_query=product+management+career" },
+    { title: "Write a Product Spec Document", type: "project", reason: "Core PM skill to practice", url: "https://github.com/topics/product-management" },
+    { title: "Inspired by Marty Cagan (Book)", type: "docs", reason: "The PM bible — how to build products people love", url: "https://www.svpg.com/inspired-how-to-create-products-customers-love/" },
+  ],
+  "Mobile App Developer": [
+    { title: "Flutter & Dart — The Complete Guide", type: "course", reason: "Build cross-platform mobile apps", url: "https://www.udemy.com/course/learn-flutter-dart-to-build-ios-android-apps/" },
+    { title: "Fireship — Flutter in 100 Seconds", type: "youtube", reason: "Quick overview of Flutter", url: "https://www.youtube.com/watch?v=lHn9OqWGsWA" },
+    { title: "Build a Weather App", type: "project", reason: "Classic mobile portfolio project", url: "https://github.com/topics/weather-app" },
+    { title: "React Native Docs", type: "docs", reason: "Alternative mobile framework reference", url: "https://reactnative.dev/docs/getting-started" },
+    { title: "Mobile App Design Best Practices", type: "article", reason: "Design patterns for mobile UX", url: "https://developer.apple.com/design/human-interface-guidelines/" },
+  ],
+  "Creative Director / Media Producer": [
+    { title: "Adobe Creative Cloud Tutorials", type: "course", reason: "Master industry-standard creative tools", url: "https://helpx.adobe.com/creative-cloud/tutorials.html" },
+    { title: "The Futur — Chris Do", type: "youtube", reason: "Business of design and creativity", url: "https://www.youtube.com/c/thefuturishere" },
+    { title: "Build a Creative Portfolio", type: "project", reason: "Essential for any creative career", url: "https://www.behance.net/" },
+    { title: "Creative Bloq", type: "article", reason: "Stay inspired with design trends", url: "https://www.creativebloq.com/" },
+    { title: "Behance Community", type: "docs", reason: "Showcase work and connect with creatives", url: "https://www.behance.net/" },
+  ],
+};
+
+const DEFAULT_RESOURCES = [
+  { title: "Learning How to Learn (Coursera)", type: "course" as const, reason: "Meta-learning skills for any career", url: "https://www.coursera.org/learn/learning-how-to-learn" },
+  { title: "Atomic Habits by James Clear", type: "article" as const, reason: "Build systems for career growth", url: "https://jamesclear.com/atomic-habits" },
+  { title: "Ali Abdaal — Productivity Tips", type: "youtube" as const, reason: "Evidence-based productivity", url: "https://www.youtube.com/c/aliabdaal" },
+  { title: "Build Something — Anything", type: "project" as const, reason: "The best learning is doing", url: "https://github.com/" },
+  { title: "LinkedIn Learning", type: "docs" as const, reason: "Broad skill development platform", url: "https://www.linkedin.com/learning/" },
+];
+
+export function generateResources(careers: CareerMatch[], profile: UserProfile) {
+  const resources: { title: string; type: "course" | "youtube" | "article" | "project" | "docs"; reason: string; url: string }[] = [];
+  const seen = new Set<string>();
+
+  // Add resources for top 2 careers
+  for (const career of careers.slice(0, 2)) {
+    const careerResources = RESOURCE_MAP[career.title] || [];
+    for (const r of careerResources) {
+      if (!seen.has(r.title)) { resources.push(r); seen.add(r.title); }
+      if (resources.length >= 6) break;
+    }
+  }
+
+  // Fill remaining with defaults
+  for (const r of DEFAULT_RESOURCES) {
+    if (resources.length >= 8) break;
+    if (!seen.has(r.title)) { resources.push(r); seen.add(r.title); }
+  }
+
+  return resources;
+}
+
 export function generateMockAnalysis(profile: UserProfile): AnalysisResponse {
   const skills = profile.skills.map((s) => s.toLowerCase());
   const interests = profile.interests.map((i) => i.toLowerCase());
@@ -131,14 +231,7 @@ export function generateMockAnalysis(profile: UserProfile): AnalysisResponse {
       reasons: [`${totalHours}h/week total workload`, `Sleep: ${profile.sleepQuality}`, `Mood: ${profile.emotionalState.replace("_", " ")}`],
       recommendations: ["Set a hard stop time daily", "ONE course/project at a time", "One full rest day per week", "20-min daily walk", "Track wins weekly"],
     },
-    resources: [
-      { title: `Getting started with ${topTitle}`, type: "course", reason: "Directly relevant", url: "https://example.com/start" },
-      { title: `${profile.skills[0] || "Core"} project ideas`, type: "project", reason: "Build your portfolio", url: "https://example.com/projects" },
-      { title: `${topTitle} career guide`, type: "article", reason: "Full roadmap overview", url: "https://example.com/guide" },
-      { title: `${profile.skills[0] || "Skill"} deep dive`, type: "youtube", reason: "Strengthen primary skill", url: "https://youtube.com/watch?v=example" },
-      { title: "Managing burnout", type: "article", reason: `Important at ${totalHours}h/week`, url: "https://example.com/burnout" },
-      { title: `${profile.interests[0] || "Industry"} community`, type: "docs", reason: "Network with others", url: "https://example.com/community" },
-    ],
+    resources: generateResources(careers, profile),
   };
 }
 
