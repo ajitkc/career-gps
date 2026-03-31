@@ -1,11 +1,18 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { UserProfile, AnalysisResponse, CheckInInput, CheckInResponse, BurnoutScore } from "@/types";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!;
+/** Server-side Supabase client for API routes (lazy-initialized to avoid build-time errors) */
+let _supabase: SupabaseClient | null = null;
 
-/** Server-side Supabase client for API routes */
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export function supabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY!
+    );
+  }
+  return _supabase;
+}
 
 // ============================================================
 // SAVE PROFILE + ANALYSIS
@@ -18,7 +25,7 @@ export async function saveProfileAndAnalysis(
   passwordHash?: string
 ): Promise<string> {
   // 1. Insert profile
-  const { data: profileRow, error: profileErr } = await supabase
+  const { data: profileRow, error: profileErr } = await supabase()
     .from("profiles")
     .insert({
       name: profile.name,
@@ -42,14 +49,14 @@ export async function saveProfileAndAnalysis(
 
   // 2. Insert skills
   if (profile.skills.length > 0) {
-    await supabase.from("user_skills").insert(
+    await supabase().from("user_skills").insert(
       profile.skills.map((skill) => ({ profile_id: profileId, skill }))
     );
   }
 
   // 3. Insert interests
   if (profile.interests.length > 0) {
-    await supabase.from("user_interests").insert(
+    await supabase().from("user_interests").insert(
       profile.interests.map((interest) => ({ profile_id: profileId, interest }))
     );
   }
@@ -70,15 +77,15 @@ export async function saveAnalysisForProfile(
 ): Promise<void> {
   // Delete existing analysis data (replace strategy)
   await Promise.all([
-    supabase.from("career_recommendations").delete().eq("profile_id", profileId),
-    supabase.from("roadmaps").delete().eq("profile_id", profileId),
-    supabase.from("burnout_assessments").delete().eq("profile_id", profileId),
-    supabase.from("resources").delete().eq("profile_id", profileId),
+    supabase().from("career_recommendations").delete().eq("profile_id", profileId),
+    supabase().from("roadmaps").delete().eq("profile_id", profileId),
+    supabase().from("burnout_assessments").delete().eq("profile_id", profileId),
+    supabase().from("resources").delete().eq("profile_id", profileId),
   ]);
 
   // Insert career recommendations
   if (analysis.career_matches.length > 0) {
-    await supabase.from("career_recommendations").insert(
+    await supabase().from("career_recommendations").insert(
       analysis.career_matches.map((c) => ({
         profile_id: profileId,
         title: c.title,
@@ -94,7 +101,7 @@ export async function saveAnalysisForProfile(
   }
 
   // Insert roadmap
-  await supabase.from("roadmaps").insert({
+  await supabase().from("roadmaps").insert({
     profile_id: profileId,
     current_stage: analysis.roadmap.current_stage,
     next_30_days: analysis.roadmap.next_30_days,
@@ -104,7 +111,7 @@ export async function saveAnalysisForProfile(
   });
 
   // Insert burnout assessment
-  await supabase.from("burnout_assessments").insert({
+  await supabase().from("burnout_assessments").insert({
     profile_id: profileId,
     score: burnoutScore?.score ?? 0,
     level: burnoutScore?.level ?? "low",
@@ -118,7 +125,7 @@ export async function saveAnalysisForProfile(
 
   // Insert resources
   if (analysis.resources.length > 0) {
-    await supabase.from("resources").insert(
+    await supabase().from("resources").insert(
       analysis.resources.map((r) => ({
         profile_id: profileId,
         title: r.title,
@@ -139,7 +146,7 @@ export async function saveCheckIn(
   checkIn: CheckInInput,
   response: CheckInResponse
 ): Promise<void> {
-  await supabase.from("checkins").insert({
+  await supabase().from("checkins").insert({
     profile_id: profileId,
     message: checkIn.message,
     emotional_state: checkIn.emotionalState ?? null,
@@ -158,11 +165,11 @@ export async function saveCheckIn(
 export async function fetchStoredAnalysis(profileId: string): Promise<AnalysisResponse | null> {
   // Fetch all data in parallel
   const [profileRes, careersRes, roadmapRes, burnoutRes, resourcesRes] = await Promise.all([
-    supabase.from("profiles").select("*").eq("id", profileId).single(),
-    supabase.from("career_recommendations").select("*").eq("profile_id", profileId).order("created_at"),
-    supabase.from("roadmaps").select("*").eq("profile_id", profileId).order("created_at", { ascending: false }).limit(1).single(),
-    supabase.from("burnout_assessments").select("*").eq("profile_id", profileId).order("created_at", { ascending: false }).limit(1).single(),
-    supabase.from("resources").select("*").eq("profile_id", profileId),
+    supabase().from("profiles").select("*").eq("id", profileId).single(),
+    supabase().from("career_recommendations").select("*").eq("profile_id", profileId).order("created_at"),
+    supabase().from("roadmaps").select("*").eq("profile_id", profileId).order("created_at", { ascending: false }).limit(1).single(),
+    supabase().from("burnout_assessments").select("*").eq("profile_id", profileId).order("created_at", { ascending: false }).limit(1).single(),
+    supabase().from("resources").select("*").eq("profile_id", profileId),
   ]);
 
   const profile = profileRes.data;
@@ -217,7 +224,7 @@ export async function fetchStoredAnalysis(profileId: string): Promise<AnalysisRe
 // ============================================================
 
 export async function fetchProfile(profileId: string): Promise<UserProfile | null> {
-  const { data: row } = await supabase
+  const { data: row } = await supabase()
     .from("profiles")
     .select("*")
     .eq("id", profileId)
@@ -225,12 +232,12 @@ export async function fetchProfile(profileId: string): Promise<UserProfile | nul
 
   if (!row) return null;
 
-  const { data: skills } = await supabase
+  const { data: skills } = await supabase()
     .from("user_skills")
     .select("skill")
     .eq("profile_id", profileId);
 
-  const { data: interests } = await supabase
+  const { data: interests } = await supabase()
     .from("user_interests")
     .select("interest")
     .eq("profile_id", profileId);

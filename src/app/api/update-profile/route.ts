@@ -31,14 +31,14 @@ export async function POST(request: Request) {
     updates.updated_at = new Date().toISOString();
 
     if (Object.keys(updates).length > 1) {
-      await supabase.from("profiles").update(updates).eq("id", profileId);
+      await supabase().from("profiles").update(updates).eq("id", profileId);
     }
 
     // Replace skills
     if (skills) {
-      await supabase.from("user_skills").delete().eq("profile_id", profileId);
+      await supabase().from("user_skills").delete().eq("profile_id", profileId);
       if (skills.length > 0) {
-        await supabase.from("user_skills").insert(
+        await supabase().from("user_skills").insert(
           skills.map((skill) => ({ profile_id: profileId, skill }))
         );
       }
@@ -46,9 +46,9 @@ export async function POST(request: Request) {
 
     // Replace interests
     if (interests) {
-      await supabase.from("user_interests").delete().eq("profile_id", profileId);
+      await supabase().from("user_interests").delete().eq("profile_id", profileId);
       if (interests.length > 0) {
-        await supabase.from("user_interests").insert(
+        await supabase().from("user_interests").insert(
           interests.map((interest) => ({ profile_id: profileId, interest }))
         );
       }

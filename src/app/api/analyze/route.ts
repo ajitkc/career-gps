@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     // Check for duplicate email
     if (body.email) {
-      const { data: existing } = await supabase
+      const { data: existing } = await supabase()
         .from("profiles")
         .select("id")
         .ilike("email", body.email.trim())

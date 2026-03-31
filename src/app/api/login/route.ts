@@ -11,7 +11,7 @@ export async function POST(request: Request) {
     }
 
     // Find profile by email
-    const { data: profiles } = await supabase
+    const { data: profiles } = await supabase()
       .from("profiles")
       .select("*")
       .ilike("email", email.trim())
@@ -33,10 +33,10 @@ export async function POST(request: Request) {
 
     // Fetch skills, interests, analysis, burnout
     const [skillsRes, interestsRes, analysis, burnoutRes] = await Promise.all([
-      supabase.from("user_skills").select("skill").eq("profile_id", profileId),
-      supabase.from("user_interests").select("interest").eq("profile_id", profileId),
+      supabase().from("user_skills").select("skill").eq("profile_id", profileId),
+      supabase().from("user_interests").select("interest").eq("profile_id", profileId),
       fetchStoredAnalysis(profileId),
-      supabase.from("burnout_assessments").select("score, level, risk_window, factors").eq("profile_id", profileId).order("created_at", { ascending: false }).limit(1).single(),
+      supabase().from("burnout_assessments").select("score, level, risk_window, factors").eq("profile_id", profileId).order("created_at", { ascending: false }).limit(1).single(),
     ]);
 
     const profile = {

@@ -9,7 +9,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ exists: false });
     }
 
-    const { data } = await supabase
+    const { data } = await supabase()
       .from("profiles")
       .select("id")
       .ilike("email", email.trim())
